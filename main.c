@@ -2,14 +2,24 @@
 #include <GL/glew.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
-#include <linmath.h>
-
+#include "SDL_endian.h"
+#include "linmath.h"
 
 #define X_RES 800
 #define Y_RES 600
 
 #define u8 unsigned char
 #define u16 unsigned short int
+
+
+#if SDL_BYTEORDER == SDL_LIL_ENDIAN
+#define SWAP16(X)    (X)
+#define SWAP32(X)    (X)
+#else
+#define SWAP16(X)    SDL_Swap16(X)
+#define SWAP32(X)    SDL_Swap32(X)
+#endif
+
 
 SDL_Window *Window;
 GLuint Vbo, Vao;
@@ -37,8 +47,9 @@ const GLchar* fragSrc = \
     "#version 150\n\
     precision highp float;\
     uniform vec4 color;\
+    out vec4 fragColor;\
     void main(void) {\
-        gl_FragColor = color;\
+        fragColor = color;\
     }";
 
 
@@ -60,8 +71,7 @@ void initAll() {
         printf("Couldn't initialize SDL Video: %s\n", SDL_GetError());
         exit(isInit);
     }
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+    
     Window = SDL_CreateWindow(
         "SDL Tutorial", 
         SDL_WINDOWPOS_UNDEFINED, 
@@ -73,12 +83,21 @@ void initAll() {
         printf("Couldn't create a window with SDL: %s\n", SDL_GetError());
         exit(-1);
     }
+
+    //Use OpenGL 3.1 core
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 );
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 2 );
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+
     SDL_GLContext *context = SDL_GL_CreateContext(Window);
     if (context == NULL) {
         printf("Couldn't create a GL context: %s\n", SDL_GetError());
         exit(-1);
     }
     SDL_GL_MakeCurrent(Window, context);
+    
     //Initialize GLEW
     glewExperimental = GL_TRUE; 
     GLenum isGlewInit = glewInit();
@@ -143,11 +162,11 @@ float getRadius(float* allCoords, int numOfVertices, vec3 centroid) {
 
 
 void loadTatou() 
-{
-	u8 *data = readFile("../FITD/INDARK/ITD_RESS.PAK_0.dat");
+{    
+    u8 *data = readFile("ITD_RESS.PAK_0.dat");
 	data += 14;
 
-    u8* palette = readFile("../FITD/INDARK/ITD_RESS.PAK_2.dat");
+    u8* palette = readFile("ITD_RESS.PAK_2.dat");
     palette += 2;
     // for (int i = 0; i < 256; ++i) {
     //     int offset = i * 3;
@@ -276,9 +295,15 @@ void loadTatou()
     //     allCoords[i] = allCoords[i] / 2000.0f;
     // }
 
+    // //Main loop flag
+    int quit = 0;
+
+    // //Event handler
+    SDL_Event e;
+
     float radPerSec = 2 * M_PI / 5;
     Uint32 ticks = SDL_GetTicks();
-    for (int i = 0; i < 300; ++i)
+    while (!quit)
     {
         // mat4x4 M;
         mat4x4_identity(M);
@@ -307,7 +332,13 @@ void loadTatou()
         float tmpVbo[numOfVertices * 3];
         applyMatrix(M, allCoords, tmpVbo, numOfVertices);
 
-        getCentroid(c, tmpVbo, numOfVertices);
+        // for (int i = 0; i < numOfVertices; ++i) {
+        //     int off = i * 3;
+        //     printf("%f %f %f\n", tmpVbo[off], tmpVbo[off+1], tmpVbo[off+2]);
+        // }
+        // exit(0);
+
+        // getCentroid(c, tmpVbo, numOfVertices);
         // printf("%f %f %f\n", c[0], c[1], c[2]);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -320,25 +351,52 @@ void loadTatou()
             Primitive prim = allPrims[i];
             // float g = (float) rand() / (float) RAND_MAX;
             vec3 color = {
-                palette[prim.colorIndex * 3] / 255.0f, 
+                (float) palette[prim.colorIndex * 3] / 255.0f, 
                 palette[prim.colorIndex * 3 + 1] / 255.0f, 
                 palette[prim.colorIndex * 3 + 2] / 255.0f
             };
             glUniform4f(colorLocation, color[0], color[1], color[2], 1.0f);
-            glDrawElements(prim.mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
+            // printf("%f %f %f\n", color[0], color[1], color[2]);
             // printf("%d\n", prim.numOfPointInPoly);
+            // for (int j = 0; j < prim.numOfPointInPoly; ++j) {
+            //     int off = prim.indices[j];
+            //     vec3 v = {tmpVbo[off], tmpVbo[off+1], tmpVbo[off+2]};
+            //     printf("  %d %f %f %f\n", off, v[0], v[1], v[2]);
+            // }
+            // glDrawElements(prim.mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
+
+            // It turns out that OSX cannot use CPU-based indices with glDrawElements,
+            //   so they need to be moved to the GPU.
+            // TODO This is really inefficient, but I don't know how to fix it.
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(prim.indices), prim.indices, GL_STATIC_DRAW);            
+            glDrawElements(prim.mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
         }
 
+        /* Sleep */
+        // SDL_Delay(1.0f / 30.0f);
+
+        // Since I am using VSYNC, this will "wait" as long as necessary
         SDL_GL_SwapWindow(Window);
 
         // SDL_Delay(1000.0f/60.0f);
+
+        while( SDL_PollEvent( &e ) != 0 )
+        {
+            //User requests quit
+            if( e.type == SDL_QUIT )
+            {
+                quit = 1;
+            }
+        }
     }
+
+    exit(0);
 	
 }
 
 
 int main(int argv, char* argc[]) {
-    initAll();
+    initAll();    
 
     static GLfloat vertices[] = { 
 		-1.0, -1.0, 0.0,
@@ -348,6 +406,7 @@ int main(int argv, char* argc[]) {
 	};
     int numVertices = 12;
     
+    // TODO The Vbo and Vao here do not need to be global... maybe model-specific?
 
     // Generate a vertex buffer in GPU memory, make it active, then copy the vertices to it
     glGenBuffers(1, &Vbo);
@@ -363,6 +422,10 @@ int main(int argv, char* argc[]) {
     //   VAO can be bound at any time, but multiple can be enabled (and used at
     //   the same time by shaders).
     glEnableVertexAttribArray(0);
+
+    GLuint elementBuffer;
+    glGenBuffers(1, &elementBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
 
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, (const GLchar**)&vertexSrc, 0);
@@ -424,20 +487,57 @@ int main(int argv, char* argc[]) {
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // glUniform4f(colorLocation, 1.0f, 0.0f, 0.0f, 1.0f);
+    loadTatou();
 
-    // mat4x4 M;
-    // mat4x4_identity(M);
+    // The code below only runs if loadTatou is commented.
 
-    // Correct aspect ratio
-    // M[0][0] = (float) Y_RES / (float) X_RES;
+    //Main loop flag
+    int quit = 0;
 
-    // applyMatrix(M, vertices, NULL, 4);
+    //Event handler
+    SDL_Event e;
 
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    //While application is running
+    while( !quit )
+    {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Feed the shaders with 4 points, starting from 0
-    // glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+        mat4x4 M;
+        mat4x4_identity(M);
+
+        // Correct aspect ratio
+        M[0][0] = (float) Y_RES / (float) X_RES;
+        // M[0][0] = (float) rand() / (float) RAND_MAX;
+
+        float tmpVbo[12];
+        applyMatrix(M, vertices, tmpVbo, 12);
+
+        glBufferData(GL_ARRAY_BUFFER, sizeof(tmpVbo), tmpVbo, GL_STATIC_DRAW);
+
+        float r = (float) rand() / RAND_MAX;
+        printf("%f ", r);
+        glUniform4f(colorLocation, r, 0.0f, 0.0f, 1.0f);
+
+        // Feed the shaders with 4 points, starting from 0
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+        /* Swap our buffers to make our changes visible */
+        SDL_GL_SwapWindow(Window);
+
+        //Handle events on queue
+        while( SDL_PollEvent( &e ) != 0 )
+        {
+            //User requests quit
+            if( e.type == SDL_QUIT )
+            {
+                quit = 1;
+            }
+        }
+
+        /* Sleep */
+        // SDL_Delay(1.0f / 30.0f);
+    }
+
 
     // NOTE The indices point to vertices, not coordinates! What exactly is a vertex is defined in the VAO.
     // unsigned short int indices[] = {0,1,2,3};
@@ -466,12 +566,10 @@ int main(int argv, char* argc[]) {
     // SDL_Delay(2000);
 
 
-    loadTatou();
-
     /* Swap our buffers to make our changes visible */
-    SDL_GL_SwapWindow(Window);
+    // SDL_GL_SwapWindow(Window);
 
     /* Sleep for 2 seconds */
-    SDL_Delay(2000);
+    // SDL_Delay(2000);
 
 }
