@@ -5,7 +5,7 @@ OBJS = main.c
 CC = gcc
 
 #INCLUDE_PATHS specifies the additional include paths we'll need
-INCLUDE_PATHS = -I../linmath.h
+#INCLUDE_PATHS = -I../linmath.h
 
 #LIBRARY_PATHS specifies the additional library paths we'll need
 #LIBRARY_PATHS = -LC:\mingw_dev_lib\lib
@@ -17,7 +17,13 @@ INCLUDE_PATHS = -I../linmath.h
 COMPILER_FLAGS = $(shell sdl2-config --cflags)
 
 #LINKER_FLAGS specifies the libraries we're linking against
-LINKER_FLAGS = $(shell sdl2-config --libs) -lglew32 -lopengl32
+LINKER_FLAGS = $(shell sdl2-config --libs)
+
+ifeq ($(OS),Windows_NT)
+    LINKER_FLAGS += -lglew32 -lopengl32
+else ifeq ($(shell uname),Darwin)
+    LINKER_FLAGS += -lglew -framework OpenGL
+endif
 
 #OBJ_NAME specifies the name of our exectuable
 OBJ_NAME = tatou
