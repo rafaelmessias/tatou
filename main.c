@@ -278,7 +278,9 @@ void loadTatou()
 
     float radPerSec = 2 * M_PI / 5;
     Uint32 ticks = SDL_GetTicks();
-    for (int i = 0; i < 300; ++i)
+
+    int quit = 0;
+    while (!quit)
     {
         // mat4x4 M;
         mat4x4_identity(M);
@@ -291,13 +293,22 @@ void loadTatou()
         M[0][0] = (float) Y_RES / (float) X_RES;
 
         Uint32 newTicks = SDL_GetTicks();
-        // mat4x4_rotate_Y(M, M, M_PI / 2);
+        
+        // Third: Rotate.
+        // How many seconds ellapsed since the first frame, times the desired
+        //   angular speed.
+        // This will increase unbounded, but it's a rotation so it doesn't
+        //   matter (trigonometry fixes it).
+        // If I checked the time ellapsed since the last frame I'd have to keep
+        //   track of the current angle and add to it, because the model is 
+        //   reset for each frame.
         mat4x4_rotate_Y(M, M, ((newTicks - ticks) / 1000.0f) * radPerSec);
         mat4x4_rotate_Z(M, M, M_PI);
         // mat4x4_rotate_X(M, M, M_PI / 2);
         
-        // Second: scale to unit sphere
-        mat4x4_scale(M, M, 0.9f / r);
+        // Second: Scale to something less than the unit sphere, so that the
+        //   entire model fits into the screen given any rotation.
+        mat4x4_scale(M, M, 0.95f / r);
         // M[3][3] = 1.0;
 
         // First: translate to origin
@@ -329,9 +340,20 @@ void loadTatou()
             // printf("%d\n", prim.numOfPointInPoly);
         }
 
+        // No need to delay if we are using VSYNC (this will wait as needed).
         SDL_GL_SwapWindow(Window);
 
         // SDL_Delay(1000.0f/60.0f);
+
+        // Read all events from the queue before the next frame.
+        // IMPORTANT: On OSX, nothing happens (i.e. no window is shown) until
+        //   the event loop starts! (I guess some events need to be polled?)
+        SDL_Event e;
+        while (SDL_PollEvent(&e) != 0) {
+            if (e.type == SDL_QUIT) {
+                quit = 1;
+            }
+        }
     }
 	
 }
@@ -469,9 +491,9 @@ int main(int argv, char* argc[]) {
     loadTatou();
 
     /* Swap our buffers to make our changes visible */
-    SDL_GL_SwapWindow(Window);
+    // SDL_GL_SwapWindow(Window);
 
     /* Sleep for 2 seconds */
-    SDL_Delay(2000);
+    // SDL_Delay(2000);
 
 }
