@@ -344,6 +344,11 @@ u8* loadPak(const char* name, u32 index)
     }
     fclose(fileHandle);
   }
+  else
+  {
+    printf("Pak not found: '%s'\n", name);
+    exit(-1);
+  }
 
   return ptr;
 #endif

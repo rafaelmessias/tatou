@@ -26,7 +26,7 @@
 
 
 SDL_Window *Window;
-GLuint Vbo, Vao;
+GLuint Vbo, Vao, Ebo;
 GLint ColorLocation;
 
 typedef struct {
@@ -262,17 +262,22 @@ void renderLoop(float *allCoords, int numOfVertices, Primitive *allPrims, int nu
             //     vec3 v = {tmpVbo[off], tmpVbo[off+1], tmpVbo[off+2]};
             //     printf("  %d %f %f %f\n", off, v[0], v[1], v[2]);
             // }
+
+            // This only works on Windows (didn't test Linux)
             // glDrawElements(prim.mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
 
             // It turns out that OSX cannot use CPU-based indices with glDrawElements,
             //   so they need to be moved to the GPU.
+            
             // TODO This is really inefficient, but I don't know how to fix it.
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(prim.indices), prim.indices, GL_STATIC_DRAW);            
+
+            // NOTE prim.indices is malloc'd, so 'sizeof(prim.indices)' doesn't work
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);            
             glDrawElements(prim.mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
         }
 
         /* Sleep */
-        // SDL_Delay(1.0f / 30.0f);
+        // SDL_Delay(1000);
 
         // Since I am using VSYNC, this will "wait" as long as necessary
         SDL_GL_SwapWindow(Window);
@@ -310,7 +315,7 @@ void loadModel(const char* pakName, int index)
     // printf("%d\n", flags&2);
     if (flags & 2)
     {
-        printf("Model has bones.\n");
+        printf("Model has bones; aborting.\n");
         return;
     }
 
@@ -343,14 +348,14 @@ void loadModel(const char* pakName, int index)
     u16 numPrim = *(u16 *)data;
 	data += 2;
 
-    printf("numprim: %d\n", numPrim);
+    // printf("numprim: %d\n", numPrim);
 
     Primitive allPrims[numPrim];
 	for (int i = 0; i < numPrim; ++i) {
         Primitive prim;
 		prim.type = *(data++);
 		if (prim.type == 0) {
-            printf("type 0");
+            // printf("type 0");
             prim.mode = GL_LINES;
             prim.numOfPointInPoly = 2;
 			data++;
@@ -379,7 +384,7 @@ void loadModel(const char* pakName, int index)
 			//printf("l %d %d\n", i, pointIndex1 / 6 + 1, pointIndex2 / 6 + 1);
             // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
 		} else if (prim.type == 1) {
-            printf("type 1\n");
+            // printf("type 1\n");
             prim.mode = GL_TRIANGLE_FAN;
 			prim.numOfPointInPoly = *data;
   			data++;
@@ -571,9 +576,9 @@ int main(int argv, char* argc[]) {
     //   the same time by shaders).
     glEnableVertexAttribArray(0);
 
-    GLuint elementBuffer;
-    glGenBuffers(1, &elementBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
+    // NOTE As soon as this Ebo is bound, glDrawElements will expect it to be used, so make sure it works.
+    glGenBuffers(1, &Ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Ebo);
 
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, (const GLchar**)&vertexSrc, 0);
@@ -636,7 +641,7 @@ int main(int argv, char* argc[]) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // loadTatou();
-    loadModel("LISTBODY", 29);
+    loadModel("LISTBODY", 2 );
 
     exit(0);
 
