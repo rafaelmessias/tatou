@@ -13,6 +13,7 @@
 
 #define u8 unsigned char
 #define u16 unsigned short int
+#define s16 short int
 
 
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
@@ -26,7 +27,7 @@
 
 SDL_Window *Window;
 GLuint Vbo, Vao;
-GLint colorLocation;
+GLint ColorLocation;
 
 typedef struct {
     u8 type;
@@ -164,122 +165,9 @@ float getRadius(float* allCoords, int numOfVertices, vec3 centroid) {
 }
 
 
-void loadTatou() 
-{    
-    // u8 *data = readFile("ITD_RESS.PAK_0.dat");
-    u8 *data = loadPak("ITD_RESS", 0);
-	data += 14;
-
-    // u8* palette = readFile("ITD_RESS.PAK_2.dat");
-    u8* palette = loadPak("ITD_RESS", 2);
-    palette += 2;
-    
-    // for (int i = 0; i < 256; ++i) {
-    //     int offset = i * 3;
-    //     printf("%d %d %d\n", palette[offset], palette[offset+1], palette[offset+2]);
-    // }
-    // exit(0);
-	
-    // No idea what this offset is
-	unsigned short int offset = *(short int *)data;
-	data += 2;
-
-	data += offset;
-	unsigned short int numOfVertices = *(short int *)data;
-	data += 2;
-
-    float allCoords[numOfVertices * 3];
-    // Read three coordinates (u16) per point
-	for (int i = 0; i < numOfVertices * 3; ++i)
-	{
-		allCoords[i] = *(short int*)data;
-		data+=2;
-	}
-    //printf("%d\n", numOfVertices);
-
-    // Send the vertices to the GPU
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(allCoords), allCoords, GL_STATIC_DRAW);
-
-	short int numPrim = *(short int *)data;
-	data += 2;
-	//printf("numPrim %d", numPrim);
-
-    Primitive allPrims[numPrim];
-	for (int i = 0; i < numPrim; ++i) {
-        Primitive prim;
-		prim.type = *(data++);
-		if (prim.type == 0) {
-            prim.mode = GL_LINES;
-            prim.numOfPointInPoly = 2;
-			data++;
-			prim.colorIndex = *data;
-			data++;
-			data++;
-
-            // u16 indices[2];
-            prim.indices = (u16*)malloc(2 * sizeof(u16)); 
-
-			prim.indices[0] = *(u16*)data / 6;
-    		data+=2;
-
-			prim.indices[1] = *(u16*)data / 6;
-    		data+=2;
-
-            // prim.indices = indices;
-
-            // glDrawElements expects indices to vertices, but the RES file 
-            // provides them as byte offsets (6 bytes per vertex)
-            //unsigned short int indices[] = {pointIndex1 / 6, pointIndex2 / 6};
-
-            // glDrawElements(GL_LINES, 2, GL_UNSIGNED_SHORT, prim.indices);
-
-            // NOTE The +1 is because OBJ files are 1-indexed
-			//printf("l %d %d\n", i, pointIndex1 / 6 + 1, pointIndex2 / 6 + 1);
-            // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
-		} else if (prim.type == 1) {
-            prim.mode = GL_TRIANGLE_FAN;
-			prim.numOfPointInPoly = *data;
-  			data++;
-
-  			u8 polyType = *data;
-			data++;
-
-  			prim.colorIndex = *data;
-			data++;
-
-            // u16 indices[prim.numOfPointInPoly];
-            prim.indices = (u16*)malloc(prim.numOfPointInPoly * sizeof(u16));
-
-			// printf("%d %d %d\n", numOfPointInPoly, polyType, polyColor);
-  			
-			//printf("f %d, ", numOfPointInPoly);
-			for(int j = 0; j < prim.numOfPointInPoly; j++)
-			{
-				u16 pointIndex = *(u16*)data;
-				//printf("  %d\n", pointIndex);
-				data += 2;
-				if ((pointIndex % 6) != 0) {
-					//printf("not divisible by 6");
-					exit(0);
-				}
-                // NOTE The +1 is because OBJ files are 1-indexed
-				//printf("%d ", pointIndex / 6 + 1);
-                prim.indices[j] = pointIndex / 6;
-			}
-            // prim.indices = indices;
-
-            // glDrawElements(GL_TRIANGLE_FAN, numOfPointInPoly, GL_UNSIGNED_SHORT, indices);
-            // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
-		} else {
-			printf("Unknown primitive type: %d.\n", prim.type);
-			exit(-1);
-		}
-        // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
-        allPrims[i] = prim;
-	}
-
-    
-    
+// TODO Make a "model" struct for this
+void renderLoop(float *allCoords, int numOfVertices, Primitive *allPrims, int numPrim, u8 *palette)
+{
     mat4x4 M;
     mat4x4_identity(M);
     
@@ -366,7 +254,7 @@ void loadTatou()
                 palette[prim.colorIndex * 3 + 1] / 255.0f, 
                 palette[prim.colorIndex * 3 + 2] / 255.0f
             };
-            glUniform4f(colorLocation, color[0], color[1], color[2], 1.0f);
+            glUniform4f(ColorLocation, color[0], color[1], color[2], 1.0f);
             // printf("%f %f %f\n", color[0], color[1], color[2]);
             // printf("%d\n", prim.numOfPointInPoly);
             // for (int j = 0; j < prim.numOfPointInPoly; ++j) {
@@ -401,9 +289,257 @@ void loadTatou()
             }
         }
     }
+}
 
+
+// First attempt to generalize the loadTatou function
+// TODO Sanity checks and error messages
+// TODO Read/store original coordinates as what they actually are (s16), not floats
+void loadModel(const char* pakName, int index)
+{
+    u8 *data = loadPak(pakName, index);
+
+    u8 *palette = loadPak("ITD_RESS", 3);
+    // palette += 2;
+
+    // Not sure if this is really signed (or if it matters)
+    s16 flags = *(s16 *)data;
+	data += 2;
+
+    // Bones?
+    // printf("%d\n", flags&2);
+    if (flags & 2)
+    {
+        printf("Model has bones.\n");
+        return;
+    }
+
+    // Not sure what is here, but I think there should be a bounding box in the start of the file somewhere
+    data += 12;
+
+    // No idea what this offset is
+	u16 offset = *(u16 *)data;
+	data += 2;
+
+    data += offset;
+	u16 numOfVertices = *(u16 *)data;
+	data += 2;
+    // printf("%d\n", numOfVertices);
+    
+    // Read three coordinates (signed 16 bits each) per point
+    // TODO Use memcpy, or some custom specialized function
+    float allCoords[numOfVertices * 3];
+	for (int i = 0; i < numOfVertices * 3; ++i)
+	{
+        // Even though allCoords is float (4 bytes), the actual coordinates are stored with two bytes
+		allCoords[i] = *(s16 *)data;
+		data += 2;
+
+        // if (i > 0 && i % 3 == 0)
+        //     printf("\n");
+        // printf("%f", allCoords[i]);
+	}
+
+    u16 numPrim = *(u16 *)data;
+	data += 2;
+
+    printf("numprim: %d\n", numPrim);
+
+    Primitive allPrims[numPrim];
+	for (int i = 0; i < numPrim; ++i) {
+        Primitive prim;
+		prim.type = *(data++);
+		if (prim.type == 0) {
+            printf("type 0");
+            prim.mode = GL_LINES;
+            prim.numOfPointInPoly = 2;
+			data++;
+			prim.colorIndex = *data;
+			data++;
+			data++;
+
+            // u16 indices[2];
+            prim.indices = (u16*)malloc(2 * sizeof(u16)); 
+
+			prim.indices[0] = *(u16*)data / 6;
+    		data+=2;
+
+			prim.indices[1] = *(u16*)data / 6;
+    		data+=2;
+
+            // prim.indices = indices;
+
+            // glDrawElements expects indices to vertices, but the RES file 
+            // provides them as byte offsets (6 bytes per vertex)
+            //u16 indices[] = {pointIndex1 / 6, pointIndex2 / 6};
+
+            // glDrawElements(GL_LINES, 2, GL_UNSIGNED_SHORT, prim.indices);
+
+            // NOTE The +1 is because OBJ files are 1-indexed
+			//printf("l %d %d\n", i, pointIndex1 / 6 + 1, pointIndex2 / 6 + 1);
+            // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
+		} else if (prim.type == 1) {
+            printf("type 1\n");
+            prim.mode = GL_TRIANGLE_FAN;
+			prim.numOfPointInPoly = *data;
+  			data++;
+
+            // polyType 1 is dithered
+  			u8 polyType = *data;
+			data++;
+
+  			prim.colorIndex = *data;
+			data++;
+
+            // u16 indices[prim.numOfPointInPoly];
+            prim.indices = (u16 *)malloc(prim.numOfPointInPoly * sizeof(u16));
+
+			// printf("%d %d %d\n", prim.numOfPointInPoly, polyType, prim.colorIndex);
+  			
+			//printf("f %d, ", numOfPointInPoly);
+			for(int j = 0; j < prim.numOfPointInPoly; j++)
+			{
+				u16 pointIndex = *(u16 *)data;
+				//printf("  %d\n", pointIndex);
+				data += 2;
+				if ((pointIndex % 6) != 0) {
+					//printf("not divisible by 6");
+					exit(0);
+				}
+                // NOTE The +1 is because OBJ files are 1-indexed
+				//printf("%d ", pointIndex / 6 + 1);
+                prim.indices[j] = pointIndex / 6;
+			}
+            // prim.indices = indices;
+
+            // glDrawElements(GL_TRIANGLE_FAN, numOfPointInPoly, GL_UNSIGNED_SHORT, indices);
+            // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
+		} else {
+			printf("Unknown primitive type: %d.\n", prim.type);
+			exit(-1);
+		}
+        // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
+        allPrims[i] = prim;        
+	}
+
+    renderLoop(allCoords, numOfVertices, allPrims, numPrim, palette);
     exit(0);
+}
+
+
+void loadTatou() 
+{    
+    // u8 *data = readFile("ITD_RESS.PAK_0.dat");
+    u8 *data = loadPak("ITD_RESS", 0);
+	data += 14;
+
+    // u8 *palette = readFile("ITD_RESS.PAK_2.dat");
+    u8 *palette = loadPak("ITD_RESS", 2);
+    palette += 2;
+    
+    // for (int i = 0; i < 256; ++i) {
+    //     int offset = i * 3;
+    //     printf("%d %d %d\n", palette[offset], palette[offset+1], palette[offset+2]);
+    // }
+    // exit(0);
 	
+    // No idea what this offset is
+	u16 offset = *(u16 *)data;
+	data += 2;
+
+	data += offset;
+	u16 numOfVertices = *(u16 *)data;
+	data += 2;
+
+    float allCoords[numOfVertices * 3];
+    // Read three coordinates (signed 16 bits each) per point
+	for (int i = 0; i < numOfVertices * 3; ++i)
+	{
+        s16 c = *(s16 *)data;
+		allCoords[i] = c;
+		data+=2;
+	}
+
+	u16 numPrim = *(u16 *)data;
+	data += 2;
+	//printf("numPrim %d", numPrim);
+
+    Primitive allPrims[numPrim];
+	for (int i = 0; i < numPrim; ++i) {
+        Primitive prim;
+		prim.type = *(data++);
+		if (prim.type == 0) {
+            prim.mode = GL_LINES;
+            prim.numOfPointInPoly = 2;
+			data++;
+			prim.colorIndex = *data;
+			data++;
+			data++;
+
+            // u16 indices[2];
+            prim.indices = (u16*)malloc(2 * sizeof(u16)); 
+
+			prim.indices[0] = *(u16*)data / 6;
+    		data+=2;
+
+			prim.indices[1] = *(u16*)data / 6;
+    		data+=2;
+
+            // prim.indices = indices;
+
+            // glDrawElements expects indices to vertices, but the RES file 
+            // provides them as byte offsets (6 bytes per vertex)
+            //u16 indices[] = {pointIndex1 / 6, pointIndex2 / 6};
+
+            // glDrawElements(GL_LINES, 2, GL_UNSIGNED_SHORT, prim.indices);
+
+            // NOTE The +1 is because OBJ files are 1-indexed
+			//printf("l %d %d\n", i, pointIndex1 / 6 + 1, pointIndex2 / 6 + 1);
+            // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
+		} else if (prim.type == 1) {
+            prim.mode = GL_TRIANGLE_FAN;
+			prim.numOfPointInPoly = *data;
+  			data++;
+
+  			u8 polyType = *data;
+			data++;
+
+  			prim.colorIndex = *data;
+			data++;
+
+            // u16 indices[prim.numOfPointInPoly];
+            prim.indices = (u16*)malloc(prim.numOfPointInPoly * sizeof(u16));
+
+			// printf("%d %d %d\n", numOfPointInPoly, polyType, polyColor);
+  			
+			//printf("f %d, ", numOfPointInPoly);
+			for(int j = 0; j < prim.numOfPointInPoly; j++)
+			{
+				u16 pointIndex = *(u16*)data;
+				//printf("  %d\n", pointIndex);
+				data += 2;
+				if ((pointIndex % 6) != 0) {
+					//printf("not divisible by 6");
+					exit(0);
+				}
+                // NOTE The +1 is because OBJ files are 1-indexed
+				//printf("%d ", pointIndex / 6 + 1);
+                prim.indices[j] = pointIndex / 6;
+			}
+            // prim.indices = indices;
+
+            // glDrawElements(GL_TRIANGLE_FAN, numOfPointInPoly, GL_UNSIGNED_SHORT, indices);
+            // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
+		} else {
+			printf("Unknown primitive type: %d.\n", prim.type);
+			exit(-1);
+		}
+        // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
+        allPrims[i] = prim;
+	}
+
+    renderLoop(allCoords, numOfVertices, allPrims, numPrim, palette);
+    exit(0);
 }
 
 
@@ -489,7 +625,7 @@ int main(int argv, char* argc[]) {
     // This connects VAO position 0 (set above) to the shader variable in_Position
     glBindAttribLocation(shaderProg, 0, "in_Position");
     glLinkProgram(shaderProg);
-    colorLocation = glGetUniformLocation(shaderProg, "color");
+    ColorLocation = glGetUniformLocation(shaderProg, "color");
     glUseProgram(shaderProg);
 
     glEnable(GL_DEPTH_TEST);
@@ -499,9 +635,12 @@ int main(int argv, char* argc[]) {
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    loadTatou();
+    // loadTatou();
+    loadModel("LISTBODY", 29);
 
-    // The code below only runs if loadTatou is commented.
+    exit(0);
+
+    // The code below is just a quad, for testing when something goes wrong.
 
     //Main loop flag
     int quit = 0;
@@ -528,7 +667,7 @@ int main(int argv, char* argc[]) {
 
         float r = (float) rand() / RAND_MAX;
         printf("%f ", r);
-        glUniform4f(colorLocation, r, 0.0f, 0.0f, 1.0f);
+        glUniform4f(ColorLocation, r, 0.0f, 0.0f, 1.0f);
 
         // Feed the shaders with 4 points, starting from 0
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -552,7 +691,7 @@ int main(int argv, char* argc[]) {
 
 
     // NOTE The indices point to vertices, not coordinates! What exactly is a vertex is defined in the VAO.
-    // unsigned short int indices[] = {0,1,2,3};
+    // u16 indices[] = {0,1,2,3};
     // glDrawElements(GL_TRIANGLE_FAN, 4, GL_UNSIGNED_SHORT, indices);
     // glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, indices);
 
