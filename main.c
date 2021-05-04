@@ -3,7 +3,10 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include "SDL_endian.h"
+
 #include "linmath.h"
+#include "pak.h"
+
 
 #define X_RES 800
 #define Y_RES 600
@@ -53,16 +56,16 @@ const GLchar* fragSrc = \
     }";
 
 
-u8* readFile(const char *filename) {
-	FILE *f = fopen(filename, "rb");
-	fseek(f, 0, SEEK_END);
-	long fsize = ftell(f);
-	fseek(f, 0, SEEK_SET);  /* same as rewind(f); */
-	u8* data = (u8*)malloc(fsize);
-	fread(data, 1, fsize, f);
-	fclose(f);
-	return data;
-}
+// u8* readFile(const char *filename) {
+// 	FILE *f = fopen(filename, "rb");
+// 	fseek(f, 0, SEEK_END);
+// 	long fsize = ftell(f);
+// 	fseek(f, 0, SEEK_SET);  /* same as rewind(f); */
+// 	u8* data = (u8*)malloc(fsize);
+// 	fread(data, 1, fsize, f);
+// 	fclose(f);
+// 	return data;
+// }
 
 
 void initAll() {
@@ -163,11 +166,14 @@ float getRadius(float* allCoords, int numOfVertices, vec3 centroid) {
 
 void loadTatou() 
 {    
-    u8 *data = readFile("ITD_RESS.PAK_0.dat");
+    // u8 *data = readFile("ITD_RESS.PAK_0.dat");
+    u8 *data = loadPak("ITD_RESS", 0);
 	data += 14;
 
-    u8* palette = readFile("ITD_RESS.PAK_2.dat");
+    // u8* palette = readFile("ITD_RESS.PAK_2.dat");
+    u8* palette = loadPak("ITD_RESS", 2);
     palette += 2;
+    
     // for (int i = 0; i < 256; ++i) {
     //     int offset = i * 3;
     //     printf("%d %d %d\n", palette[offset], palette[offset+1], palette[offset+2]);

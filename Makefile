@@ -1,5 +1,5 @@
 #OBJS specifies which files to compile as part of the project
-OBJS = main.c
+OBJS = main.c pak.c unpack.c
 
 #CC specifies which compiler we're using
 CC = gcc
@@ -17,7 +17,7 @@ CC = gcc
 COMPILER_FLAGS = $(shell sdl2-config --cflags)
 
 #LINKER_FLAGS specifies the libraries we're linking against
-LINKER_FLAGS = $(shell sdl2-config --libs)
+LINKER_FLAGS = $(shell sdl2-config --libs) -lz
 
 ifeq ($(OS),Windows_NT)
     LINKER_FLAGS += -lglew32 -lopengl32
