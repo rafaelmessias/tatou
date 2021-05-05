@@ -15,19 +15,9 @@
 #define u16 unsigned short int
 #define s16 short int
 
+#define DEFAULT_PAL 0
+#define TATOU_PAL 1
 
-#if SDL_BYTEORDER == SDL_LIL_ENDIAN
-#define SWAP16(X)    (X)
-#define SWAP32(X)    (X)
-#else
-#define SWAP16(X)    SDL_Swap16(X)
-#define SWAP32(X)    SDL_Swap32(X)
-#endif
-
-
-SDL_Window *Window;
-GLuint Vbo, Vao, Ebo;
-GLint ColorLocation;
 
 typedef struct {
     u8 type;
@@ -36,6 +26,15 @@ typedef struct {
     u8 numOfPointInPoly;
     GLenum mode;
 } Primitive;
+
+SDL_Window *Window;
+GLuint Vbo, Vao, Ebo;
+GLint ColorLocation;
+u8 Palette[256 * 3];
+float *allCoords = NULL;
+int numOfVertices;
+Primitive *allPrims = NULL;
+int numPrim;
 
 
 // in_Position was bound to attribute index 0
@@ -92,8 +91,8 @@ void initAll() {
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 );
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 2 );
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+    // SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    // SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
     SDL_GLContext *context = SDL_GL_CreateContext(Window);
     if (context == NULL) {
@@ -101,6 +100,8 @@ void initAll() {
         exit(-1);
     }
     SDL_GL_MakeCurrent(Window, context);
+
+    // SDL_SetWindowFullscreen(Window, SDL_WINDOW_FULLSCREEN);
     
     //Initialize GLEW
     glewExperimental = GL_TRUE; 
@@ -114,7 +115,7 @@ void initAll() {
 
 // TODO Just for fun, make these computations vectorized...?
 // Maybe the (min+max)/2 is better than the centroid?
-void getCentroid(vec3 r, float* allCoords, int numOfVertices) {
+void getCentroid(vec3 r) {
     r[0] = 0, r[1] = 0, r[2] = 0;
     for (int i = 0; i < numOfVertices; ++i) {
         int offset = i * 3;
@@ -128,7 +129,7 @@ void getCentroid(vec3 r, float* allCoords, int numOfVertices) {
 }
 
 
-void applyMatrix(mat4x4 M, float* allCoords, float* out, int numOfVertices)
+void applyMatrix(mat4x4 M, float* out)
 {
     if (out == NULL)
     {
@@ -147,7 +148,7 @@ void applyMatrix(mat4x4 M, float* allCoords, float* out, int numOfVertices)
 }
 
 
-float getRadius(float* allCoords, int numOfVertices, vec3 centroid) {
+float getRadius(vec3 centroid) {
     float r = 0.0f;
     for (int i = 0; i < numOfVertices; ++i) {
         int offset = i * 3;
@@ -165,23 +166,42 @@ float getRadius(float* allCoords, int numOfVertices, vec3 centroid) {
 }
 
 
+// Maybe use an enum?
+void loadPalette(int paletteId) {
+    u8 *tmpPal;
+    if (paletteId == TATOU_PAL)
+    {
+        tmpPal = loadPak("ITD_RESS", 2);
+        tmpPal += 2;
+    }
+    else
+    {
+        tmpPal = loadPak("ITD_RESS", 3);
+    }
+    // The global Palette is a fixed-size array, but loadPak returns a heap
+    //   pointer, so we have to handle that
+    memcpy(Palette, tmpPal, sizeof(Palette));
+    free(tmpPal);
+}
+
+
 // TODO Make a "model" struct for this
-void renderLoop(float *allCoords, int numOfVertices, Primitive *allPrims, int numPrim, u8 *palette)
+void renderLoop()
 {
     mat4x4 M;
     mat4x4_identity(M);
     
     vec3 c;
-    getCentroid(c, allCoords, numOfVertices);
+    getCentroid(c);
     // printf("%f %f %f\n", c[0], c[1], c[2]);
 
-    float r = getRadius(allCoords, numOfVertices, c);
+    float r = getRadius(c);
     // printf("%f\n", r);
 
     // TODO vectorize
     mat4x4_translate(M, -c[0], -c[1], -c[2]);
 
-    applyMatrix(M, allCoords, NULL, numOfVertices);
+    applyMatrix(M, NULL);
 
     // HERE: Scale the model to fit the screen    
     // for (int i = 0; i < numOfVertices * 3; ++i) 
@@ -229,7 +249,7 @@ void renderLoop(float *allCoords, int numOfVertices, Primitive *allPrims, int nu
         // mat4x4_translate(M, -c[0], -c[1], -c[2]);
         
         float tmpVbo[numOfVertices * 3];
-        applyMatrix(M, allCoords, tmpVbo, numOfVertices);
+        applyMatrix(M, tmpVbo);
 
         // for (int i = 0; i < numOfVertices; ++i) {
         //     int off = i * 3;
@@ -250,9 +270,9 @@ void renderLoop(float *allCoords, int numOfVertices, Primitive *allPrims, int nu
             Primitive prim = allPrims[i];
             // float g = (float) rand() / (float) RAND_MAX;
             vec3 color = {
-                (float) palette[prim.colorIndex * 3] / 255.0f, 
-                palette[prim.colorIndex * 3 + 1] / 255.0f, 
-                palette[prim.colorIndex * 3 + 2] / 255.0f
+                (float) Palette[prim.colorIndex * 3] / 255.0f, 
+                Palette[prim.colorIndex * 3 + 1] / 255.0f, 
+                Palette[prim.colorIndex * 3 + 2] / 255.0f
             };
             glUniform4f(ColorLocation, color[0], color[1], color[2], 1.0f);
             // printf("%f %f %f\n", color[0], color[1], color[2]);
@@ -316,9 +336,6 @@ void loadModel(const char* pakName, int index)
 {
     u8 *data = loadPak(pakName, index);
 
-    u8 *palette = loadPak("ITD_RESS", 3);
-    // palette += 2;
-
     // Not sure if this is really signed (or if it matters)
     s16 flags = *(s16 *)data;
 	data += 2;
@@ -338,13 +355,16 @@ void loadModel(const char* pakName, int index)
 	data += 2;
 
     data += offset;
-	u16 numOfVertices = *(u16 *)data;
+	numOfVertices = *(u16 *)data;
 	data += 2;
     // printf("%d\n", numOfVertices);
     
+    // We'll reuse the global vertex buffer
+    if (allCoords != NULL)
+        free(allCoords);
     // Read three coordinates (signed 16 bits each) per point
     // TODO Use memcpy, or some custom specialized function
-    float allCoords[numOfVertices * 3];
+    allCoords = (float *)malloc(numOfVertices * sizeof(float) * 3);
 	for (int i = 0; i < numOfVertices * 3; ++i)
 	{
         // Even though allCoords is float (4 bytes), the actual coordinates are stored with two bytes
@@ -432,12 +452,15 @@ void loadModel(const char* pakName, int index)
         // exit(0);
     }
 
-    u16 numPrim = *(u16 *)data;
+    numPrim = *(u16 *)data;
 	data += 2;
 
     // printf("numprim: %d\n", numPrim);
 
-    Primitive allPrims[numPrim];
+    // Reuse the global
+    if (allPrims != NULL)
+        free(allPrims);
+    allPrims = (Primitive *)malloc(numPrim * sizeof(Primitive));
 	for (int i = 0; i < numPrim; ++i) {
         Primitive prim;
 		prim.type = *(data++);
@@ -513,125 +536,13 @@ void loadModel(const char* pakName, int index)
         // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
         allPrims[i] = prim;        
 	}
-
-    renderLoop(allCoords, numOfVertices, allPrims, numPrim, palette);
-    exit(0);
 }
 
 
 void loadTatou() 
 {    
-    // u8 *data = readFile("ITD_RESS.PAK_0.dat");
-    u8 *data = loadPak("ITD_RESS", 0);
-	data += 14;
-
-    // u8 *palette = readFile("ITD_RESS.PAK_2.dat");
-    u8 *palette = loadPak("ITD_RESS", 2);
-    palette += 2;
-    
-    // for (int i = 0; i < 256; ++i) {
-    //     int offset = i * 3;
-    //     printf("%d %d %d\n", palette[offset], palette[offset+1], palette[offset+2]);
-    // }
-    // exit(0);
-	
-    // No idea what this offset is
-	u16 offset = *(u16 *)data;
-	data += 2;
-
-	data += offset;
-	u16 numOfVertices = *(u16 *)data;
-	data += 2;
-
-    float allCoords[numOfVertices * 3];
-    // Read three coordinates (signed 16 bits each) per point
-	for (int i = 0; i < numOfVertices * 3; ++i)
-	{
-        s16 c = *(s16 *)data;
-		allCoords[i] = c;
-		data+=2;
-	}
-
-	u16 numPrim = *(u16 *)data;
-	data += 2;
-	//printf("numPrim %d", numPrim);
-
-    Primitive allPrims[numPrim];
-	for (int i = 0; i < numPrim; ++i) {
-        Primitive prim;
-		prim.type = *(data++);
-		if (prim.type == 0) {
-            prim.mode = GL_LINES;
-            prim.numOfPointInPoly = 2;
-			data++;
-			prim.colorIndex = *data;
-			data++;
-			data++;
-
-            // u16 indices[2];
-            prim.indices = (u16*)malloc(2 * sizeof(u16)); 
-
-			prim.indices[0] = *(u16*)data / 6;
-    		data+=2;
-
-			prim.indices[1] = *(u16*)data / 6;
-    		data+=2;
-
-            // prim.indices = indices;
-
-            // glDrawElements expects indices to vertices, but the RES file 
-            // provides them as byte offsets (6 bytes per vertex)
-            //u16 indices[] = {pointIndex1 / 6, pointIndex2 / 6};
-
-            // glDrawElements(GL_LINES, 2, GL_UNSIGNED_SHORT, prim.indices);
-
-            // NOTE The +1 is because OBJ files are 1-indexed
-			//printf("l %d %d\n", i, pointIndex1 / 6 + 1, pointIndex2 / 6 + 1);
-            // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
-		} else if (prim.type == 1) {
-            prim.mode = GL_TRIANGLE_FAN;
-			prim.numOfPointInPoly = *data;
-  			data++;
-
-  			u8 polyType = *data;
-			data++;
-
-  			prim.colorIndex = *data;
-			data++;
-
-            // u16 indices[prim.numOfPointInPoly];
-            prim.indices = (u16*)malloc(prim.numOfPointInPoly * sizeof(u16));
-
-			// printf("%d %d %d\n", numOfPointInPoly, polyType, polyColor);
-  			
-			//printf("f %d, ", numOfPointInPoly);
-			for(int j = 0; j < prim.numOfPointInPoly; j++)
-			{
-				u16 pointIndex = *(u16*)data;
-				//printf("  %d\n", pointIndex);
-				data += 2;
-				if ((pointIndex % 6) != 0) {
-					//printf("not divisible by 6");
-					exit(0);
-				}
-                // NOTE The +1 is because OBJ files are 1-indexed
-				//printf("%d ", pointIndex / 6 + 1);
-                prim.indices[j] = pointIndex / 6;
-			}
-            // prim.indices = indices;
-
-            // glDrawElements(GL_TRIANGLE_FAN, numOfPointInPoly, GL_UNSIGNED_SHORT, indices);
-            // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
-		} else {
-			printf("Unknown primitive type: %d.\n", prim.type);
-			exit(-1);
-		}
-        // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
-        allPrims[i] = prim;
-	}
-
-    renderLoop(allCoords, numOfVertices, allPrims, numPrim, palette);
-    exit(0);
+    loadPalette(TATOU_PAL);
+    loadModel("ITD_RESS", 0);
 }
 
 
@@ -721,98 +632,16 @@ int main(int argv, char* argc[]) {
     glUseProgram(shaderProg);
 
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_MULTISAMPLE);
+    // glEnable(GL_MULTISAMPLE);
     SDL_GL_SetSwapInterval(1);
 
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // loadTatou();
+    loadPalette(DEFAULT_PAL);
     loadModel("LISTBODY", 1);
 
-    exit(0);
+    // loadTatou();
 
-    // The code below is just a quad, for testing when something goes wrong.
-
-    //Main loop flag
-    int quit = 0;
-
-    //Event handler
-    SDL_Event e;
-
-    //While application is running
-    while( !quit )
-    {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        mat4x4 M;
-        mat4x4_identity(M);
-
-        // Correct aspect ratio
-        M[0][0] = (float) Y_RES / (float) X_RES;
-        // M[0][0] = (float) rand() / (float) RAND_MAX;
-
-        float tmpVbo[12];
-        applyMatrix(M, vertices, tmpVbo, 12);
-
-        glBufferData(GL_ARRAY_BUFFER, sizeof(tmpVbo), tmpVbo, GL_STATIC_DRAW);
-
-        float r = (float) rand() / RAND_MAX;
-        printf("%f ", r);
-        glUniform4f(ColorLocation, r, 0.0f, 0.0f, 1.0f);
-
-        // Feed the shaders with 4 points, starting from 0
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-        /* Swap our buffers to make our changes visible */
-        SDL_GL_SwapWindow(Window);
-
-        //Handle events on queue
-        while( SDL_PollEvent( &e ) != 0 )
-        {
-            //User requests quit
-            if( e.type == SDL_QUIT )
-            {
-                quit = 1;
-            }
-        }
-
-        /* Sleep */
-        // SDL_Delay(1.0f / 30.0f);
-    }
-
-
-    // NOTE The indices point to vertices, not coordinates! What exactly is a vertex is defined in the VAO.
-    // u16 indices[] = {0,1,2,3};
-    // glDrawElements(GL_TRIANGLE_FAN, 4, GL_UNSIGNED_SHORT, indices);
-    // glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, indices);
-
-    /* Swap our buffers to make our changes visible */
-    // SDL_GL_SwapWindow(Window);
-
-    /* Sleep for 2 seconds */
-    // SDL_Delay(2000);
-
-
-    // float vertices2[numVertices];
-    // for (int i = 0; i < numVertices; ++i) {
-    //     vertices2[i] = 0.9 * vertices[i];
-    // }
-    //printf("%f \n", vertices2[0]);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
-    // glDrawElements(GL_TRIANGLE_FAN, 4, GL_UNSIGNED_SHORT, indices);
-
-    /* Swap our buffers to make our changes visible */
-    // SDL_GL_SwapWindow(Window);
-
-    /* Sleep for 2 seconds */
-    // SDL_Delay(2000);
-
-
-    /* Swap our buffers to make our changes visible */
-    // SDL_GL_SwapWindow(Window);
-
-    /* Sleep for 2 seconds */
-    // SDL_Delay(2000);
-
+    renderLoop();
 }
