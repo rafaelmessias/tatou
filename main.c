@@ -267,7 +267,7 @@ void renderLoop(float *allCoords, int numOfVertices, Primitive *allPrims, int nu
             // It turns out that OSX cannot use CPU-based indices with glDrawElements,
             //   so they need to be moved to the GPU.
             // TODO This is really inefficient, but I don't know how to fix it.
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(prim.indices), prim.indices, GL_STATIC_DRAW);            
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);            
             glDrawElements(prim.mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
         }
 
@@ -292,6 +292,18 @@ void renderLoop(float *allCoords, int numOfVertices, Primitive *allPrims, int nu
 }
 
 
+// Offsets from Pak files always come in intervals of 6 bytes, because they
+//   point to the beginning of a vertex, which is 6 bytes long. I divide them
+//   by 2 because I need them in intervals of 3, since there are three
+//   consecutive floats per vertex in my buffer.
+// void getVertex(float *vertexBuffer, u16 offset, vec3 out)
+// {    
+//     out[0] = vertexBuffer[offset/2];
+//     out[1] = vertexBuffer[offset/2+1];
+//     out[2] = vertexBuffer[offset/2+2];
+// }
+
+
 // First attempt to generalize the loadTatou function
 // TODO Sanity checks and error messages
 // TODO Read/store original coordinates as what they actually are (s16), not floats
@@ -307,12 +319,11 @@ void loadModel(const char* pakName, int index)
 	data += 2;
 
     // Bones?
-    // printf("%d\n", flags&2);
-    if (flags & 2)
-    {
-        printf("Model has bones.\n");
-        return;
-    }
+    // if (flags & 2)
+    // {
+    //     printf("Model has bones.\n");
+    //     return;
+    // }
 
     // Not sure what is here, but I think there should be a bounding box in the start of the file somewhere
     data += 12;
@@ -340,17 +351,94 @@ void loadModel(const char* pakName, int index)
         // printf("%f", allCoords[i]);
 	}
 
+    if (flags & 2)
+    {
+        // printf("Model has bones.\n");
+
+        u16 numBones = *(u16 *)data;
+        data += 2;
+        
+        u16 boneOffsets[numBones];
+        memcpy(boneOffsets, data, sizeof(boneOffsets));
+        data += sizeof(boneOffsets);
+
+        // The 'data' pointer must remain fixed throughout the loop, we only
+        //   add the accumulated offset at the end.
+        int accumBoneOffset = 0;
+        // To be honest I don't really see the point of the offsets... we might
+        //   as well just loop over all bones in the file order.
+        for (int i = 0; i < numBones; ++i)
+        {
+            // boneData must be a byte type to simplify pointer arithmetic
+            u8 *boneData = data + boneOffsets[i];
+            if(flags & 8)
+            {
+                printf("  flag 3 set\n");
+                accumBoneOffset += 24;
+            }
+            else
+            {
+                // for (int j = 0; j < 8; ++j)
+                //     printf("%d ", *(u16 *)(boneData + j * 2));
+                // printf("\n");
+                u16 firstVertexOffset = *(u16 *)boneData / 2;
+                // vec3 firstVertex; 
+                // getVertex(allCoords, firstVertexOffset, firstVertex);
+                // printf("%f %f %f\n", firstVertex[0], firstVertex[1], firstVertex[2]);
+
+                u16 numSubVertex = *(u16 *)(boneData + 2);
+                                
+                u16 refVertexOffset = *(u16 *)(boneData + 4) / 2;
+                // vec3 refVertex; 
+                // getVertex(allCoords, *(u16 *)(boneData + 4), refVertex);
+                // printf("%f %f %f\n", refVertex[0], refVertex[1], refVertex[2]);
+                vec3 refVertex = 
+                { 
+                    allCoords[refVertexOffset], 
+                    allCoords[refVertexOffset + 1],
+                    allCoords[refVertexOffset + 2]
+                };
+
+                u16 unknownFlag = *(u16 *)(boneData + 6);
+                u16 type = *(u16 *)(boneData + 8);
+                // Three rotation angles (I think...?)                
+                u16 *rotVec3 = (u16 *)(boneData + 10);
+                
+                printf("bone offset: %d, type: %d\n", boneOffsets[i], type);
+                // printf("  %d, %d, %d\n", firstVertex, numSubVertex, refVertex);
+
+                // Translate 'numSubVertex' vertices, starting from 'firstVertex',
+                //   following 'refVertex'.
+                u16 curVertexOffset = firstVertexOffset;                 
+                for (int j = 0; j < numSubVertex; ++j)
+                {
+                    allCoords[curVertexOffset] += refVertex[0];
+                    allCoords[curVertexOffset + 1] += refVertex[1];
+                    allCoords[curVertexOffset + 2] += refVertex[2];
+                    curVertexOffset += 3;
+                }
+                
+                accumBoneOffset += 16;
+            }
+            // exit(0);
+        }
+        data += accumBoneOffset;
+
+        // exit(0);
+    }
+
     u16 numPrim = *(u16 *)data;
 	data += 2;
 
-    printf("numprim: %d\n", numPrim);
+    printf("numPrim: %d\n", numPrim);
+    // exit(0);
 
     Primitive allPrims[numPrim];
 	for (int i = 0; i < numPrim; ++i) {
         Primitive prim;
 		prim.type = *(data++);
 		if (prim.type == 0) {
-            printf("type 0");
+            // printf("type 0");
             prim.mode = GL_LINES;
             prim.numOfPointInPoly = 2;
 			data++;
@@ -379,7 +467,7 @@ void loadModel(const char* pakName, int index)
 			//printf("l %d %d\n", i, pointIndex1 / 6 + 1, pointIndex2 / 6 + 1);
             // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
 		} else if (prim.type == 1) {
-            printf("type 1\n");
+            // printf("type 1\n");
             prim.mode = GL_TRIANGLE_FAN;
 			prim.numOfPointInPoly = *data;
   			data++;
@@ -636,7 +724,7 @@ int main(int argv, char* argc[]) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // loadTatou();
-    loadModel("LISTBODY", 29);
+    loadModel("LISTBODY", 1);
 
     exit(0);
 
