@@ -24,6 +24,7 @@ typedef struct {
     u8 colorIndex;
     u16* indices;
     u8 numOfPointInPoly;
+    u16 discSize;
     GLenum mode;
 } Primitive;
 
@@ -93,8 +94,8 @@ void initAll() {
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 );
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 2 );
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
-    // SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    // SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
     SDL_GLContext *context = SDL_GL_CreateContext(Window);
     if (context == NULL) {
@@ -389,8 +390,18 @@ void loadModel(const char* pakName, int index)
             // glDrawElements(GL_TRIANGLE_FAN, numOfPointInPoly, GL_UNSIGNED_SHORT, indices);
             // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
 		} else {
-			printf("Unknown primitive type: %d.\n", prim.type);
-			exit(-1);
+			// printf("Unknown primitive type: %d.\n", prim.type);
+			// exit(-1);
+            prim.mode = GL_POINTS;
+            prim.numOfPointInPoly = 1;
+            data++;
+            prim.colorIndex = *data;
+            data++;
+            data++;
+            prim.discSize = *(u16*)data;
+            data += 2;
+            *prim.indices = *(u16*)data;
+            data += 2;
 		}
         // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
         allPrims[i] = prim;        
@@ -482,7 +493,7 @@ void renderLoop()
 
         // Send the vertices to the GPU
         glBufferData(GL_ARRAY_BUFFER, sizeof(tmpVbo), tmpVbo, GL_STATIC_DRAW);
-
+        
         for (int i = 0; i < numPrim; ++i) 
         {
             Primitive prim = allPrims[i];
@@ -509,6 +520,13 @@ void renderLoop()
             
             // TODO This is really inefficient, but I don't know how to fix it.
 
+            // TODO Make an Enum for primitive type
+            // if (prim.type == 3)
+            // {
+                   // TODO Need to scale this correctly before using it 
+            //     glPointSize(prim.discSize);
+            // }
+            
             // NOTE prim.indices is malloc'd, so 'sizeof(prim.indices)' doesn't work
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);            
             glDrawElements(prim.mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
@@ -656,7 +674,8 @@ int main(int argv, char* argc[]) {
     glUseProgram(shaderProg);
 
     glEnable(GL_DEPTH_TEST);
-    // glEnable(GL_MULTISAMPLE);
+    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_POINT_SMOOTH);
     SDL_GL_SetSwapInterval(1);
 
     glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -667,18 +686,5 @@ int main(int argv, char* argc[]) {
 
     // loadTatou();
 
-    // renderLoop();
-
-    // int matrix[20][3];
-    int (*matrix)[3] = (int(*)[3])malloc(sizeof(int) * 20 * 3);
-    for (int i = 0; i < 20; ++i)
-    {
-        for (int j = 0; j < 3; ++j)
-        {
-            matrix[i][j] = 3*i+j;
-        }
-    }
-
-    // int (*m2)[3] = matrix;
-    printf("%d", matrix[10][1]);
+    renderLoop();
 }

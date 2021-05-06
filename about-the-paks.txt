@@ -37,3 +37,4 @@ ITD_RESS
 # Notes:
 * The file "alonebody.cpp" describes how to load a model very succintly.
 * https://kb.speeddemosarchive.com/Alone_in_the_Dark_(1-3)/Game_Mechanics_and_Glitches
+* It seems that spheres are actually never really fully drawn, but only circles.
