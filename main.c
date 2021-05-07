@@ -238,7 +238,7 @@ void loadModel(const char* pakName, int index)
 
     if (flags & 2)
     {
-        // printf("Model has bones.\n");
+        printf("Model has bones.\n");
 
         u16 numBones = *(u16 *)data;
         data += 2;
@@ -255,7 +255,8 @@ void loadModel(const char* pakName, int index)
         for (int i = 0; i < numBones; ++i)
         {
             // boneData must be a byte type to simplify pointer arithmetic
-            u8 *boneData = data + boneOffsets[i];
+            // u8 *boneData = data + boneOffsets[i];
+            u8 *boneData = data;
             if(flags & 8)
             {
                 printf("  flag 3 set\n");
@@ -290,6 +291,7 @@ void loadModel(const char* pakName, int index)
                 u16 *rotVec3 = (u16 *)(boneData + 10);
                 
                 printf("bone offset: %d, type: %d\n", boneOffsets[i], type);
+                printf("  rot: %d %d %d\n", rotVec3[0], rotVec3[1], rotVec3[2]);
                 // printf("  %d, %d, %d\n", firstVertex, numSubVertex, refVertex);
 
                 // Translate 'numSubVertex' vertices, starting from 'firstVertex',
@@ -303,13 +305,11 @@ void loadModel(const char* pakName, int index)
                     curVertexOffset += 3;
                 }
                 
-                accumBoneOffset += 16;
+                // accumBoneOffset += 16;
+                data += 16;
             }
-            // exit(0);
         }
         data += accumBoneOffset;
-
-        // exit(0);
     }
 
     numPrim = *(u16 *)data;
@@ -676,6 +676,7 @@ int main(int argv, char* argc[]) {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_POINT_SMOOTH);
+    glEnable(GL_CULL_FACE);
     SDL_GL_SetSwapInterval(1);
 
     glClearColor(0.0, 0.0, 0.0, 1.0);
