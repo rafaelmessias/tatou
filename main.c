@@ -36,8 +36,7 @@ float *allCoords = NULL;
 int numOfVertices;
 Primitive *allPrims = NULL;
 int numPrim;
-int ModelIndex = 0;
-
+int ModelIndex = 12;
 
 
 // in_Position was bound to attribute index 0
@@ -113,6 +112,9 @@ void initAll() {
         printf( "Couldn't initialize GLEW: %s\n", glewGetErrorString(isGlewInit));
         exit(-1);
     }
+
+    // Auto-flush stdout
+    setvbuf(stdout, NULL, _IONBF, 0);
 }
 
 
@@ -193,6 +195,8 @@ void loadPalette(int paletteId) {
 // TODO Read/store original coordinates as what they actually are (s16), not floats
 void loadModel(const char* pakName, int index)
 {
+    printf("Loading model: %s, %d\n", pakName, index);
+    // fflush(stdout);
     // TODO For sure memory is leaking here.
     u8 *data = loadPak(pakName, index);
 
@@ -290,8 +294,8 @@ void loadModel(const char* pakName, int index)
                 // Three rotation angles (I think...?)                
                 u16 *rotVec3 = (u16 *)(boneData + 10);
                 
-                printf("bone offset: %d, type: %d\n", boneOffsets[i], type);
-                printf("  rot: %d %d %d\n", rotVec3[0], rotVec3[1], rotVec3[2]);
+                // printf("bone offset: %d, type: %d\n", boneOffsets[i], type);
+                // printf("  rot: %d %d %d\n", rotVec3[0], rotVec3[1], rotVec3[2]);
                 // printf("  %d, %d, %d\n", firstVertex, numSubVertex, refVertex);
 
                 // Translate 'numSubVertex' vertices, starting from 'firstVertex',
@@ -336,10 +340,10 @@ void loadModel(const char* pakName, int index)
             // u16 indices[2];
             prim.indices = (u16*)malloc(2 * sizeof(u16)); 
 
-			prim.indices[0] = *(u16*)data / 6;
+			prim.indices[0] = *(u16*)data;
     		data+=2;
 
-			prim.indices[1] = *(u16*)data / 6;
+			prim.indices[1] = *(u16*)data;
     		data+=2;
 
             // prim.indices = indices;
@@ -389,7 +393,7 @@ void loadModel(const char* pakName, int index)
 
             // glDrawElements(GL_TRIANGLE_FAN, numOfPointInPoly, GL_UNSIGNED_SHORT, indices);
             // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
-		} else {
+		} else if (prim.type == 2) {
 			// printf("Unknown primitive type: %d.\n", prim.type);
 			// exit(-1);
             prim.mode = GL_POINTS;
@@ -398,13 +402,29 @@ void loadModel(const char* pakName, int index)
             prim.colorIndex = *data;
             data++;
             data++;
-            prim.discSize = *(u16*)data;
-            data += 2;
+            // prim.discSize = *(u16*)data;
+            // data += 2;
+            prim.indices = (u16 *)malloc(sizeof(u16));
             *prim.indices = *(u16*)data;
             data += 2;
 		}
+        else if (prim.type == 3)
+        {
+            prim.mode = GL_POINTS;
+            prim.numOfPointInPoly = 1;
+            data++;
+            prim.colorIndex = *data;
+            data++;
+            data++;
+            prim.discSize = *(u16*)data;
+            data += 2;
+            prim.indices = (u16 *)malloc(sizeof(u16));
+            *prim.indices = *(u16*)data;
+            data += 2;
+        }
+
         // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
-        allPrims[i] = prim;        
+        allPrims[i] = prim;
 	}
 
     // If the code above fails, everything is a mess of incomplete data.
@@ -441,6 +461,8 @@ void renderLoop()
     float radPerSec = 2 * M_PI / 5;
     Uint32 ticks = SDL_GetTicks();
     mat4x4 M;
+
+    int primHighlight = 0;
 
     int quit = 0;
     while (!quit)
@@ -532,6 +554,15 @@ void renderLoop()
             glDrawElements(prim.mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
         }
 
+        Primitive prim = allPrims[primHighlight]; 
+        glUniform4f(ColorLocation, 1.0f, 1.0f, 1.0f, 1.0f);
+        glPointSize(5.0f);
+        glDepthFunc(GL_ALWAYS);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);        
+        glDrawElements(GL_POINTS, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
+        glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
+        glDepthFunc(GL_LESS);
+
         /* Sleep */
         // SDL_Delay(1000);
 
@@ -552,6 +583,7 @@ void renderLoop()
             }
             if (e.type == SDL_KEYDOWN)
             {
+                Primitive p;
                 switch (e.key.keysym.sym)
                 {
                     case SDLK_ESCAPE:
@@ -559,7 +591,42 @@ void renderLoop()
                         break;
 
                     case SDLK_RIGHT:
+                        // TODO Must check boundaries here
                         loadModel("LISTBODY", ++ModelIndex);
+                        primHighlight = 0;
+                        break;
+
+                    case SDLK_LEFT:
+                        if (ModelIndex > 0)
+                        {
+                            loadModel("LISTBODY", --ModelIndex);
+                            primHighlight = 0;
+                        }                        
+                        break;
+
+                    case SDLK_s:
+                        if (primHighlight < numPrim - 1)
+                        {
+                            primHighlight++;
+                            printf("Highlighted primitive: %d\n", primHighlight);
+                            // p = allPrims[primHighlight];
+                            // printf("  Type: %d\n", p.type);
+                            // printf("  Color: %d\n", p.colorIndex);
+                            // printf("  Num. pts: %d\n", p.numOfPointInPoly);
+                            // for (int i = 0; i < p.numOfPointInPoly; ++i)
+                            // {
+                            //     printf(" %d", p.indices[i]);
+                            // }
+                            // printf("\n");
+                        }
+                        break;
+
+                    case SDLK_a:
+                        if (primHighlight > 0)
+                        {
+                            primHighlight--;
+                            printf("Highlighted primitive: %d\n", primHighlight);
+                        }
                         break;
                 }
 
