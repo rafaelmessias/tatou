@@ -77,6 +77,14 @@ void initAll() {
         exit(isInit);
     }
     
+    //Use OpenGL 3.1 core
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 );
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 2 );
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
+    // glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
+
     Window = SDL_CreateWindow(
         "SDL Tutorial", 
         SDL_WINDOWPOS_UNDEFINED, 
@@ -88,13 +96,6 @@ void initAll() {
         printf("Couldn't create a window with SDL: %s\n", SDL_GetError());
         exit(-1);
     }
-
-    //Use OpenGL 3.1 core
-    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 );
-    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 2 );
-    SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
     SDL_GLContext *context = SDL_GL_CreateContext(Window);
     if (context == NULL) {
@@ -555,7 +556,11 @@ void renderLoop()
         }
 
         Primitive prim = allPrims[primHighlight]; 
-        glUniform4f(ColorLocation, 1.0f, 1.0f, 1.0f, 1.0f);
+        glUniform4f(ColorLocation, 1.0f, 1.0f, 1.0f, 0.5f);
+        // glEnable(GL_POINT_SMOOTH);
+        // glEnable(GL_BLEND);
+        // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
         glPointSize(5.0f);
         glDepthFunc(GL_ALWAYS);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);        
