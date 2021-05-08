@@ -1,5 +1,5 @@
 #OBJS specifies which files to compile as part of the project
-OBJS = main.c pak.c unpack.c
+OBJS = main.c pak.c unpack.c model.c
 
 #CC specifies which compiler we're using
 CC = gcc
