@@ -199,98 +199,97 @@ void loadModel(const char* pakName, int index)
         // TODO Need to free all the malloc'd members too!
         free(allPrims);
     }
+    
     allPrims = (Primitive *)malloc(numPrim * sizeof(Primitive));
-	for (int i = 0; i < numPrim; ++i) 
+	
+    for (int i = 0; i < numPrim; ++i) 
     {
         Primitive prim;
 
         // The first byte is always the type
 		prim.type = *(data++);
 		
-        // TODO switch?
-        if (prim.type == 0) 
+        switch (prim.type)
         {
-            // printf("--- prim %d\n", i);
-            prim.numOfPointInPoly = 2;
-            // printf("  line num points: %d\n", *data);
-			data++;
-			prim.colorIndex = *data;
-			data++;
+            // Line
+            case 0:
+                prim.numOfPointInPoly = 2;
+			
+                // ?
+                data++;
+                
+                prim.colorIndex = *data;
+                data++;
 
-            // printf("  line ???: %d\n", *data);
-			data++;
+                // ?
+                data++;
 
-            prim.indices = (uint16_t*)malloc(2 * sizeof(uint16_t)); 
+                break;
+            
+            // Polygon, with variable number of vertices
+            case 1:
+                prim.numOfPointInPoly = *data;
+                data++;
 
-			prim.indices[0] = *(uint16_t*)data / 6;
-    		data+=2;
+                // NOTE polyType 1 is dithered
+                uint8_t polyType = *data;
+                data++;
 
-			prim.indices[1] = *(uint16_t*)data / 6;
-    		data+=2;
+                prim.colorIndex = *data;
+                data++;
 
-            // NOTE The +1 is because OBJ files are 1-indexed
-			//printf("l %d %d\n", i, pointIndex1 / 6 + 1, pointIndex2 / 6 + 1);
-		} 
-        else if (prim.type == 1) 
-        {
-			prim.numOfPointInPoly = *data;
-  			data++;
+                break;
+            
+            // Point (1 pixel..?)
+            case 2:
+                prim.numOfPointInPoly = 1;
+                
+                // ?
+                data++;
 
-            // polyType 1 is dithered
-  			uint8_t polyType = *data;
-			data++;
+                prim.colorIndex = *data;
+                data++;
 
-  			prim.colorIndex = *data;
-			data++;
+                // ?
+                data++;
+                
+                break;
 
-            prim.indices = (uint16_t *)malloc(prim.numOfPointInPoly * sizeof(uint16_t));
+            // Sphere
+            case 3:
+                prim.numOfPointInPoly = 1;
 
-			for(int j = 0; j < prim.numOfPointInPoly; j++)
-			{
-				uint16_t pointIndex = *(uint16_t *)data;
-				data += 2;
-                // NOTE The +1 is because OBJ files are 1-indexed
-				//printf("%d ", pointIndex / 6 + 1);
-                prim.indices[j] = pointIndex / 6;
-			}
-		} 
-        else if (prim.type == 2) 
-        {
-            // printf("--- prim %d", i);
-            prim.numOfPointInPoly = 1;
-            // printf("  point num points: %d\n", *data);
-            data++;
-            prim.colorIndex = *data;
-            data++;
-            // printf("  point ???: %d\n", *data);
-            data++;
-            // prim.discSize = *(uint16_t*)data;
-            // data += 2;
-            prim.indices = (uint16_t *)malloc(sizeof(uint16_t));
-            *prim.indices = *(uint16_t*)data / 6;
-            data += 2;
-		}
-        else if (prim.type == 3)
-        {
-            // printf("--- prim %d", i);
-            prim.numOfPointInPoly = 1;
-            // printf("  sphere num points: %d\n", *data);
-            data++;
-            prim.colorIndex = *data;
-            data++;
-            // printf("  sphere ???: %d\n", *data);
-            data++;
-            prim.discSize = *(uint16_t*)data;
-            data += 2;
-            prim.indices = (uint16_t *)malloc(sizeof(uint16_t));
-            *prim.indices = *(uint16_t*)data / 6;
-            data += 2;
+                // ?
+                data++;
+
+                prim.colorIndex = *data;
+                data++;
+                
+                // ?
+                data++;
+
+                prim.discSize = *(uint16_t*)data;
+                data += 2;
+
+                break;
+
+            default:
+                printf("Unsupported primitive type: %d\n", prim.type);
+                exit(-1);
         }
-        else
+
+        prim.indices = (uint16_t *)malloc(prim.numOfPointInPoly * sizeof(uint16_t));
+
+        for(int j = 0; j < prim.numOfPointInPoly; j++)
         {
-            printf("Unsupported primitive type: %d\n", prim.type);
-            exit(-1);
+            uint16_t pointIndex = *(uint16_t *)data;
+            data += 2;
+            
+            // The indices here must point to vertices, not coordinates (or bytes),
+            //   because they are passed directly to glDrawElements.
+            prim.indices[j] = pointIndex / 6;
         }
+
         allPrims[i] = prim;
 	}
 
