@@ -163,6 +163,7 @@ void renderLoop()
     Uint32 ticks = SDL_GetTicks();
     mat4x4 M;
 
+    int isDebugPrim = 0;
     int primHighlight = 0;
 
     int quit = 0;
@@ -281,18 +282,21 @@ void renderLoop()
             glDrawElements(mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
         }
 
-        Primitive prim = allPrims[primHighlight]; 
-        glUniform4f(ColorLocation, 1.0f, 1.0f, 1.0f, 0.5f);
-        // glEnable(GL_POINT_SMOOTH);
-        // glEnable(GL_BLEND);
-        // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        // glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
-        glPointSize(5.0f);
-        glDepthFunc(GL_ALWAYS);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);        
-        glDrawElements(GL_POINTS, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
-        glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
-        glDepthFunc(GL_LESS);
+        if (isDebugPrim)
+        {
+            Primitive prim = allPrims[primHighlight]; 
+            glUniform4f(ColorLocation, 1.0f, 1.0f, 1.0f, 0.5f);
+            // glEnable(GL_POINT_SMOOTH);
+            // glEnable(GL_BLEND);
+            // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            // glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
+            glPointSize(5.0f);
+            glDepthFunc(GL_ALWAYS);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);        
+            glDrawElements(GL_POINTS, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
+            glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
+            glDepthFunc(GL_LESS);
+        }
 
         /* Sleep */
         // SDL_Delay(1000);
@@ -481,7 +485,7 @@ int main(int argv, char* argc[]) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     loadPalette(DEFAULT_PAL);
-    loadModel("LISTBODY", ModelIndex);
+    loadModel("LISTBOD2", ModelIndex);
 
     // loadTatou();
 
