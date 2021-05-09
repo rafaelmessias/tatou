@@ -220,6 +220,10 @@ void renderLoop()
                             printf("Highlighted primitive: %d\n", primHighlight);
                         }
                         break;
+
+                    case SDLK_d:
+                        isDebugPrim = !isDebugPrim;
+                        break;
                 }
 
             }
