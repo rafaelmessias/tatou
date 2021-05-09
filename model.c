@@ -195,21 +195,23 @@ void loadModel(const char* pakName, int index)
 
     // Reuse the global
     if (allPrims != NULL)
+    {
+        // TODO Need to free all the malloc'd members too!
         free(allPrims);
+    }
     allPrims = (Primitive *)malloc(numPrim * sizeof(Primitive));
-	for (int i = 0; i < numPrim; ++i) {
+	for (int i = 0; i < numPrim; ++i) 
+    {
         Primitive prim;
 		prim.type = *(data++);
-		if (prim.type == 0) {
-            // printf("type 0");
-            // prim.mode = GL_LINES;
+		if (prim.type == 0) 
+        {
             prim.numOfPointInPoly = 2;
 			data++;
 			prim.colorIndex = *data;
 			data++;
 			data++;
 
-            // uint16_t indices[2];
             prim.indices = (uint16_t*)malloc(2 * sizeof(uint16_t)); 
 
 			prim.indices[0] = *(uint16_t*)data;
@@ -218,20 +220,11 @@ void loadModel(const char* pakName, int index)
 			prim.indices[1] = *(uint16_t*)data;
     		data+=2;
 
-            // prim.indices = indices;
-
-            // glDrawElements expects indices to vertices, but the RES file 
-            // provides them as byte offsets (6 bytes per vertex)
-            //uint16_t indices[] = {pointIndex1 / 6, pointIndex2 / 6};
-
-            // glDrawElements(GL_LINES, 2, GL_UNSIGNED_SHORT, prim.indices);
-
             // NOTE The +1 is because OBJ files are 1-indexed
 			//printf("l %d %d\n", i, pointIndex1 / 6 + 1, pointIndex2 / 6 + 1);
-            // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
-		} else if (prim.type == 1) {
-            // printf("type 1\n");
-            // prim.mode = GL_TRIANGLE_FAN;
+		} 
+        else if (prim.type == 1) 
+        {
 			prim.numOfPointInPoly = *data;
   			data++;
 
@@ -242,33 +235,19 @@ void loadModel(const char* pakName, int index)
   			prim.colorIndex = *data;
 			data++;
 
-            // uint16_t indices[prim.numOfPointInPoly];
             prim.indices = (uint16_t *)malloc(prim.numOfPointInPoly * sizeof(uint16_t));
 
-			// printf("%d %d %d\n", prim.numOfPointInPoly, polyType, prim.colorIndex);
-  			
-			//printf("f %d, ", numOfPointInPoly);
 			for(int j = 0; j < prim.numOfPointInPoly; j++)
 			{
 				uint16_t pointIndex = *(uint16_t *)data;
-				//printf("  %d\n", pointIndex);
 				data += 2;
-				if ((pointIndex % 6) != 0) {
-					//printf("not divisible by 6");
-					exit(0);
-				}
                 // NOTE The +1 is because OBJ files are 1-indexed
 				//printf("%d ", pointIndex / 6 + 1);
                 prim.indices[j] = pointIndex / 6;
 			}
-            // prim.indices = indices;
-
-            // glDrawElements(GL_TRIANGLE_FAN, numOfPointInPoly, GL_UNSIGNED_SHORT, indices);
-            // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
-		} else if (prim.type == 2) {
-			// printf("Unknown primitive type: %d.\n", prim.type);
-			// exit(-1);
-            // prim.mode = GL_POINTS;
+		} 
+        else if (prim.type == 2) 
+        {
             prim.numOfPointInPoly = 1;
             data++;
             prim.colorIndex = *data;
@@ -282,7 +261,6 @@ void loadModel(const char* pakName, int index)
 		}
         else if (prim.type == 3)
         {
-            // prim.mode = GL_POINTS;
             prim.numOfPointInPoly = 1;
             data++;
             prim.colorIndex = *data;
@@ -294,8 +272,6 @@ void loadModel(const char* pakName, int index)
             *prim.indices = *(uint16_t*)data;
             data += 2;
         }
-
-        // glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
         allPrims[i] = prim;
 	}
 
