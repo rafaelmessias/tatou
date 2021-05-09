@@ -28,6 +28,7 @@ void dumpModel()
 {
     printf("Current model: %d\n", ModelIndex);
     printf("Num. vertices: %d\n", numOfVertices);
+    printf("Num. prims: %d\n", numPrim);
 }
 
 // TODO Make a "model" struct for this
@@ -204,7 +205,7 @@ void renderLoop()
                         // TODO Must check boundaries here
                         loadModel("LISTBODY", ++ModelIndex);
                         primHighlight = 0;
-                        dumpModel();
+                        // dumpModel();
                         break;
 
                     case SDLK_LEFT:
@@ -212,12 +213,12 @@ void renderLoop()
                         {
                             loadModel("LISTBODY", --ModelIndex);
                             primHighlight = 0;                            
-                            dumpModel();
+                            // dumpModel();
                         }                        
                         break;
 
                     case SDLK_s:
-                        if (primHighlight < numPrim - 1)
+                        if (isDebugPrim && primHighlight < numPrim - 1)
                         {
                             primHighlight++;
                             printf("Highlighted primitive: %d\n", primHighlight);
@@ -226,7 +227,7 @@ void renderLoop()
                         break;
 
                     case SDLK_a:
-                        if (primHighlight > 0)
+                        if (isDebugPrim && primHighlight > 0)
                         {
                             primHighlight--;
                             printf("Highlighted primitive: %d\n", primHighlight);

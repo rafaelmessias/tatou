@@ -203,21 +203,29 @@ void loadModel(const char* pakName, int index)
 	for (int i = 0; i < numPrim; ++i) 
     {
         Primitive prim;
+
+        // The first byte is always the type
 		prim.type = *(data++);
-		if (prim.type == 0) 
+		
+        // TODO switch?
+        if (prim.type == 0) 
         {
+            // printf("--- prim %d\n", i);
             prim.numOfPointInPoly = 2;
+            // printf("  line num points: %d\n", *data);
 			data++;
 			prim.colorIndex = *data;
 			data++;
+
+            // printf("  line ???: %d\n", *data);
 			data++;
 
             prim.indices = (uint16_t*)malloc(2 * sizeof(uint16_t)); 
 
-			prim.indices[0] = *(uint16_t*)data;
+			prim.indices[0] = *(uint16_t*)data / 6;
     		data+=2;
 
-			prim.indices[1] = *(uint16_t*)data;
+			prim.indices[1] = *(uint16_t*)data / 6;
     		data+=2;
 
             // NOTE The +1 is because OBJ files are 1-indexed
@@ -248,29 +256,40 @@ void loadModel(const char* pakName, int index)
 		} 
         else if (prim.type == 2) 
         {
+            // printf("--- prim %d", i);
             prim.numOfPointInPoly = 1;
+            // printf("  point num points: %d\n", *data);
             data++;
             prim.colorIndex = *data;
             data++;
+            // printf("  point ???: %d\n", *data);
             data++;
             // prim.discSize = *(uint16_t*)data;
             // data += 2;
             prim.indices = (uint16_t *)malloc(sizeof(uint16_t));
-            *prim.indices = *(uint16_t*)data;
+            *prim.indices = *(uint16_t*)data / 6;
             data += 2;
 		}
         else if (prim.type == 3)
         {
+            // printf("--- prim %d", i);
             prim.numOfPointInPoly = 1;
+            // printf("  sphere num points: %d\n", *data);
             data++;
             prim.colorIndex = *data;
             data++;
+            // printf("  sphere ???: %d\n", *data);
             data++;
             prim.discSize = *(uint16_t*)data;
             data += 2;
             prim.indices = (uint16_t *)malloc(sizeof(uint16_t));
-            *prim.indices = *(uint16_t*)data;
+            *prim.indices = *(uint16_t*)data / 6;
             data += 2;
+        }
+        else
+        {
+            printf("Unsupported primitive type: %d\n", prim.type);
+            exit(-1);
         }
         allPrims[i] = prim;
 	}
