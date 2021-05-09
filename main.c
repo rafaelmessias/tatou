@@ -5,8 +5,30 @@
 #include "model.h"
 
 
-int ModelIndex = 12;
+int ModelIndex = 75;
+int primHighlight = 210;
+int isDebugPrim = 1;
 
+
+void dumpPrim()
+{
+    Primitive p = allPrims[primHighlight];
+    printf("  Type: %d\n", p.type);
+    printf("  Color: %d\n", p.colorIndex);
+    printf("  Num. pts: %d\n", p.numOfPointInPoly);
+    for (int i = 0; i < p.numOfPointInPoly; ++i)
+    {
+        printf(" %d", p.indices[i]);
+    }
+    printf("\n");
+}
+
+
+void dumpModel()
+{
+    printf("Current model: %d\n", ModelIndex);
+    printf("Num. vertices: %d\n", numOfVertices);
+}
 
 // TODO Make a "model" struct for this
 void renderLoop()
@@ -19,9 +41,6 @@ void renderLoop()
     float radPerSec = 2 * M_PI / 5;
     Uint32 ticks = SDL_GetTicks();
     mat4x4 M;
-
-    int isDebugPrim = 0;
-    int primHighlight = 0;
 
     int quit = 0;
     while (!quit)
@@ -175,7 +194,6 @@ void renderLoop()
             }
             if (e.type == SDL_KEYDOWN)
             {
-                Primitive p;
                 switch (e.key.keysym.sym)
                 {
                     case SDLK_ESCAPE:
@@ -186,13 +204,15 @@ void renderLoop()
                         // TODO Must check boundaries here
                         loadModel("LISTBODY", ++ModelIndex);
                         primHighlight = 0;
+                        dumpModel();
                         break;
 
                     case SDLK_LEFT:
                         if (ModelIndex > 0)
                         {
                             loadModel("LISTBODY", --ModelIndex);
-                            primHighlight = 0;
+                            primHighlight = 0;                            
+                            dumpModel();
                         }                        
                         break;
 
@@ -201,15 +221,7 @@ void renderLoop()
                         {
                             primHighlight++;
                             printf("Highlighted primitive: %d\n", primHighlight);
-                            // p = allPrims[primHighlight];
-                            // printf("  Type: %d\n", p.type);
-                            // printf("  Color: %d\n", p.colorIndex);
-                            // printf("  Num. pts: %d\n", p.numOfPointInPoly);
-                            // for (int i = 0; i < p.numOfPointInPoly; ++i)
-                            // {
-                            //     printf(" %d", p.indices[i]);
-                            // }
-                            // printf("\n");
+                            dumpPrim();
                         }
                         break;
 
@@ -218,6 +230,7 @@ void renderLoop()
                         {
                             primHighlight--;
                             printf("Highlighted primitive: %d\n", primHighlight);
+                            dumpPrim();
                         }
                         break;
 
