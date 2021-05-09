@@ -44,6 +44,24 @@ void getCentroid(vec3 r) {
 }
 
 
+float getRadius(vec3 centroid) {
+    float r = 0.0f;
+    for (int i = 0; i < numOfVertices; ++i) {
+        int offset = i * 3;
+        vec3 v = {
+            allCoords[offset] - centroid[0], 
+            allCoords[offset+1] - centroid[1], 
+            allCoords[offset+2] - centroid[2]
+        };
+        // No need for sqrt here
+        float vr = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+        if (vr > r)
+            r = vr;
+    }
+    return sqrt(r);
+}
+
+
 // First attempt to generalize the loadTatou function
 // TODO Sanity checks and error messages
 // TODO Read/store original coordinates as what they actually are (int16_t), not floats

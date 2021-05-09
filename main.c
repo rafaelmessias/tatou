@@ -5,73 +5,7 @@
 #include "model.h"
 
 
-#define u8 unsigned char
-#define u16 unsigned short int
-#define s16 short int
-
-#define DEFAULT_PAL 0
-#define TATOU_PAL 1
-
-
 int ModelIndex = 12;
-
-
-
-// u8* readFile(const char *filename) {
-// 	FILE *f = fopen(filename, "rb");
-// 	fseek(f, 0, SEEK_END);
-// 	long fsize = ftell(f);
-// 	fseek(f, 0, SEEK_SET);  /* same as rewind(f); */
-// 	u8* data = (u8*)malloc(fsize);
-// 	fread(data, 1, fsize, f);
-// 	fclose(f);
-// 	return data;
-// }
-
-
-
-
-
-
-
-
-
-
-float getRadius(vec3 centroid) {
-    float r = 0.0f;
-    for (int i = 0; i < numOfVertices; ++i) {
-        int offset = i * 3;
-        vec3 v = {
-            allCoords[offset] - centroid[0], 
-            allCoords[offset+1] - centroid[1], 
-            allCoords[offset+2] - centroid[2]
-        };
-        // No need for sqrt here
-        float vr = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-        if (vr > r)
-            r = vr;
-    }
-    return sqrt(r);
-}
-
-
-// Maybe use an enum?
-void loadPalette(int paletteId) {
-    u8 *tmpPal;
-    if (paletteId == TATOU_PAL)
-    {
-        tmpPal = loadPak("ITD_RESS", 2);
-        tmpPal += 2;
-    }
-    else
-    {
-        tmpPal = loadPak("ITD_RESS", 3);
-    }
-    // The global Palette is a fixed-size array, but loadPak returns a heap
-    //   pointer, so we have to handle that
-    memcpy(Palette, tmpPal, sizeof(Palette));
-    free(tmpPal);
-}
 
 
 // TODO Make a "model" struct for this

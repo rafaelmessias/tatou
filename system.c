@@ -1,4 +1,5 @@
 #include "system.h"
+#include "pak.h"
 
 
 SDL_Window *Window;
@@ -24,6 +25,18 @@ GLchar* fragSrc = \
     void main(void) {\
         fragColor = color;\
     }";
+
+
+// u8* readFile(const char *filename) {
+// 	FILE *f = fopen(filename, "rb");
+// 	fseek(f, 0, SEEK_END);
+// 	long fsize = ftell(f);
+// 	fseek(f, 0, SEEK_SET);  /* same as rewind(f); */
+// 	u8* data = (u8*)malloc(fsize);
+// 	fread(data, 1, fsize, f);
+// 	fclose(f);
+// 	return data;
+// }
 
 
 void initAll() {
@@ -156,4 +169,23 @@ void initRenderer()
     glEnable(GL_POINT_SMOOTH);
     glEnable(GL_CULL_FACE);
     SDL_GL_SetSwapInterval(1);
+}
+
+
+// Maybe use an enum?
+void loadPalette(int paletteId) {
+    uint8_t *tmpPal;
+    if (paletteId == TATOU_PAL)
+    {
+        tmpPal = loadPak("ITD_RESS", 2);
+        tmpPal += 2;
+    }
+    else
+    {
+        tmpPal = loadPak("ITD_RESS", 3);
+    }
+    // The global Palette is a fixed-size array, but loadPak returns a heap
+    //   pointer, so we have to handle that
+    memcpy(Palette, tmpPal, sizeof(Palette));
+    free(tmpPal);
 }
