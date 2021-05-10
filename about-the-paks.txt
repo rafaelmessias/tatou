@@ -10,8 +10,11 @@ ITD_RESS
   - bit 2: on if the model has bones
   - bit 3: off if the model does not have bones (not sure about this one...?)
   - bit 4: some modifier for the bones (...?) if this is set, each bone has 24 bytes, else 16 bytes. It seems to indicate some extra rotation is necessary for the bone.
-- 12 bytes: unknown
-- 2 bytes: unknown offset; skip this before proceeding
+- 12 bytes: bounding box
+  - 2 bytes each: min_x, max_x, min_y, max_y, min_z, max_z
+- 2 bytes: unknown offset
+  - skip this before proceeding
+  - seems to be mostly filled with zeros. Maybe a placeholder memory block?
 - 2 bytes: num of points (aka numOfPoints, numPointInPoly)
 - Points: numOfPoints * 3 * 2 (each point/vertex is 6 bytes: 2 bytes per each (X,Y,Z)
 - If model has bones:

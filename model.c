@@ -3,10 +3,49 @@
 #include "pak.h"
 
 
+// TODO Globals should be capitalized correctly
 float *allCoords = NULL;
 int numOfVertices;
 Primitive *allPrims = NULL;
 int numPrim;
+uint16_t *boneOffsets;
+uint16_t numBones;
+int16_t bbox[6];
+vec3 bbCenter;
+
+
+void dumpPrim(int primIndex)
+{
+    Primitive p = allPrims[primIndex];
+    printf("Primitive #%d:\n", primIndex);
+    printf("  Type: %d\n", p.type);
+    printf("  Color: %d\n", p.colorIndex);
+    printf("  Num. pts: %d\n", p.numOfPointInPoly);
+    for (int i = 0; i < p.numOfPointInPoly; ++i)
+    {
+        printf(" %d", p.indices[i]);
+    }
+    printf("\n");
+}
+
+
+void dumpModel()
+{
+    printf("Current model:\n");
+    printf("  Num. vertices: %d\n", numOfVertices);
+    printf("  Num. bones: %d\n", numBones);
+    printf("  Num. prims: %d\n", numPrim);
+}
+
+
+void dumpBytes(uint8_t *ptr, int num)
+{
+    for (int i = 0; i < num; ++i)
+    {
+        printf("%d ", *ptr++);
+    }
+    printf("\n");
+}
 
 
 void applyMatrix(mat4x4 M, float* out)
@@ -29,7 +68,7 @@ void applyMatrix(mat4x4 M, float* out)
 
 
 // TODO Just for fun, make these computations vectorized...?
-// Maybe the (min+max)/2 is better than the centroid?
+// NOTE Not using this anymore.
 void getCentroid(vec3 r) {
     r[0] = 0, r[1] = 0, r[2] = 0;
     for (int i = 0; i < numOfVertices; ++i) {
@@ -62,31 +101,56 @@ float getRadius(vec3 centroid) {
 }
 
 
+// This is given in the file, but I'm not sure if it's always correct.
+// NOTE Not using this for now.
+// TODO Currently not following the original file format.
+void getBoundingBox(float bbox[6])
+{
+    // Initialize output with the first vertex
+    // Output format: min_x, min_y, min_z, max_x, max_y, max_z
+    memcpy(bbox, allCoords, 3 * sizeof(float));
+    memcpy(bbox+3, allCoords, 3 * sizeof(float));
+    // Skip the first vertex
+    for (int i = 1; i < numOfVertices; ++i)
+    {
+        int off = i * 3;
+        for (int j = 0; j < 3; ++j)
+        {
+            bbox[j] = allCoords[off+j] < bbox[j] ? allCoords[off+j] : bbox[j];
+            bbox[j+3] = allCoords[off+j] > bbox[j+3] ? allCoords[off+j] : bbox[j+3];
+        }
+    }
+}
+
+
 // First attempt to generalize the loadTatou function
 // TODO Sanity checks and error messages
 // TODO Read/store original coordinates as what they actually are (int16_t), not floats
 void loadModel(const char* pakName, int index)
 {
     printf("Loading model: %s, %d\n", pakName, index);
-    // fflush(stdout);
+
     // TODO For sure memory is leaking here.
     uint8_t *data = loadPak(pakName, index);
 
     // Not sure if this is really signed (or if it matters)
     int16_t flags = *(int16_t *)data;
+    // dumpBytes(data, 2);
 	data += 2;
 
-    // Bones?
-    // if (flags & 2)
-    // {
-    //     printf("Model has bones.\n");
-    //     return;
-    // }
-
-    // Not sure what is here, but I think there should be a bounding box in the start of the file somewhere
+    // Bounding Box
+    memcpy(bbox, data, 6 * sizeof(int16_t));
     data += 12;
 
-    // No idea what this offset is
+    // Compute center point from bounding box, forced to float
+    // X
+    bbCenter[0] = (bbox[0] + bbox[1]) / 2.0f;
+    // Y
+    bbCenter[1] = (bbox[2] + bbox[3]) / 2.0f;
+    // Z
+    bbCenter[2] = (bbox[4] + bbox[5]) / 2.0f;
+
+    // No idea what this offset is; seems to be zero many times?
 	uint16_t offset = *(uint16_t *)data;
 	data += 2;
 
@@ -116,12 +180,16 @@ void loadModel(const char* pakName, int index)
     {
         printf("Model has bones.\n");
 
-        const uint16_t numBones = *(uint16_t *)data;
+        numBones = *(uint16_t *)data;
         data += 2;
+
+        int sizeOfBoneOffsets = numBones * sizeof(uint16_t);
         
-        uint16_t boneOffsets[numBones];
-        memcpy(boneOffsets, data, sizeof(boneOffsets));
-        data += sizeof(boneOffsets);
+        boneOffsets = (uint16_t *)malloc(sizeOfBoneOffsets);
+        memcpy(boneOffsets, data, sizeOfBoneOffsets);
+        data += sizeOfBoneOffsets;
+
+        // TODO This routine for reading bones is really messy right now.
 
         // The 'data' pointer must remain fixed throughout the loop, we only
         //   add the accumulated offset at the end.
@@ -185,13 +253,11 @@ void loadModel(const char* pakName, int index)
                 data += 16;
             }
         }
-        data += accumBoneOffset;
+        // data += accumBoneOffset;
     }
 
     numPrim = *(uint16_t *)data;
 	data += 2;
-
-    // printf("numprim: %d\n", numPrim);
 
     // Reuse the global
     if (allPrims != NULL)
@@ -201,6 +267,8 @@ void loadModel(const char* pakName, int index)
     }
     
     allPrims = (Primitive *)malloc(numPrim * sizeof(Primitive));
+
+    dumpModel();
 	
     for (int i = 0; i < numPrim; ++i) 
     {
@@ -275,6 +343,12 @@ void loadModel(const char* pakName, int index)
 
             default:
                 printf("Unsupported primitive type: %d\n", prim.type);
+                for (int j = 0; j < 20; ++j)
+                {
+                    if (j % 16 == 0)
+                        printf("\n");
+                    printf("%d ", *data++);
+                }
                 exit(-1);
         }
 
@@ -300,12 +374,12 @@ void loadModel(const char* pakName, int index)
     mat4x4 M;
     mat4x4_identity(M);
     
-    vec3 c;
-    getCentroid(c);
+    // vec3 c;
+    // getCentroid(c);
     // printf("%f %f %f\n", c[0], c[1], c[2]);
 
     // TODO vectorize
-    mat4x4_translate(M, -c[0], -c[1], -c[2]);
+    mat4x4_translate(M, -bbCenter[0], -bbCenter[1], -bbCenter[2]);
 
     applyMatrix(M, NULL);
 

@@ -5,31 +5,10 @@
 #include "model.h"
 
 
-int ModelIndex = 75;
-int primHighlight = 210;
+int ModelIndex = 6;
+int primHighlight = 0;
 int isDebugPrim = 1;
 
-
-void dumpPrim()
-{
-    Primitive p = allPrims[primHighlight];
-    printf("  Type: %d\n", p.type);
-    printf("  Color: %d\n", p.colorIndex);
-    printf("  Num. pts: %d\n", p.numOfPointInPoly);
-    for (int i = 0; i < p.numOfPointInPoly; ++i)
-    {
-        printf(" %d", p.indices[i]);
-    }
-    printf("\n");
-}
-
-
-void dumpModel()
-{
-    printf("Current model: %d\n", ModelIndex);
-    printf("Num. vertices: %d\n", numOfVertices);
-    printf("Num. prims: %d\n", numPrim);
-}
 
 // TODO Make a "model" struct for this
 void renderLoop()
@@ -167,7 +146,7 @@ void renderLoop()
             // glEnable(GL_BLEND);
             // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             // glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
-            glPointSize(5.0f);
+            glPointSize(2.0f);
             glDepthFunc(GL_ALWAYS);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);        
             glDrawElements(GL_POINTS, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
@@ -222,7 +201,7 @@ void renderLoop()
                         {
                             primHighlight++;
                             printf("Highlighted primitive: %d\n", primHighlight);
-                            dumpPrim();
+                            dumpPrim(primHighlight);
                         }
                         break;
 
@@ -231,7 +210,7 @@ void renderLoop()
                         {
                             primHighlight--;
                             printf("Highlighted primitive: %d\n", primHighlight);
-                            dumpPrim();
+                            dumpPrim(primHighlight);
                         }
                         break;
 
