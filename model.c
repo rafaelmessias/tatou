@@ -269,7 +269,7 @@ void loadModel(const char* pakName, int index)
     allPrims = (Primitive *)malloc(numPrim * sizeof(Primitive));
 
     dumpModel();
-	
+	int abortPrims = 0;
     for (int i = 0; i < numPrim; ++i) 
     {
         Primitive prim;
@@ -343,13 +343,18 @@ void loadModel(const char* pakName, int index)
 
             default:
                 printf("Unsupported primitive type: %d\n", prim.type);
-                for (int j = 0; j < 20; ++j)
-                {
-                    if (j % 16 == 0)
-                        printf("\n");
-                    printf("%d ", *data++);
-                }
-                exit(-1);
+                // This doesn't happen often, but I've found at least primitive types 6 and 7,
+                //   which are unknown to me at this point. If that happens, stop reading the
+                //   model but do not abort the program.
+                abortPrims = 1;
+        }
+
+        if (abortPrims)
+        {
+            // This will limit the model to the supported primitives read so far, which is not
+            //   optimal but allows the program to keep working.
+            numPrim = i;
+            break;
         }
 
         prim.indices = (uint16_t *)malloc(prim.numOfPointInPoly * sizeof(uint16_t));

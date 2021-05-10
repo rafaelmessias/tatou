@@ -57,3 +57,5 @@ ITD_RESS
 
   * Bones must be translated in the order they appear in the file, and not in the order of the bone
     offsets. I assume that the bone offsets are for rotating instead.
+
+  * It seems there are at least two unknown primitive types so far, 6 and 7.
