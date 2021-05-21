@@ -54,8 +54,13 @@ ITD_RESS
     also the open chest with the blue material on the inside (culling the back face solvez z-fighting).
     So, I assume that culling the back face is the right thing to do, and the holes do not appear in 
     the game due to the fixed camera position (need to check to make sure).
+    - It seems that back-face culling is indeed the right thing to do. Look at the skeleton driver's
+      lapel: only the visible part of the inside is covered by back-facing polygons, so they could
+      save memory/disk space.
 
   * Bones must be translated in the order they appear in the file, and not in the order of the bone
     offsets. I assume that the bone offsets are for rotating instead.
 
   * It seems there are at least two unknown primitive types so far, 6 and 7.
+    - Prim. type 7 are the Bastard's cubes.
+    - Prim. type 7 are related to the skeleton driver's eyes (not sure exactly how to handle them yet).
