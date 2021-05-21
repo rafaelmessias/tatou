@@ -297,7 +297,7 @@ void loadModel(const char* pakName, int index)
     {
         Primitive prim;
 
-        // The first byte is always the type
+        // The first byte is always the primitive type
 		prim.type = *(data++);
 		
         switch (prim.type)
@@ -331,8 +331,12 @@ void loadModel(const char* pakName, int index)
 
                 break;
             
-            // Point (1 pixel..?)
-            case 2:
+            // Treat unknown primitives as points, for debugging purposes
+            case 6:
+            case 7:
+                printf("Unsupported primitive type: %d\n", prim.type);
+            // Point (1 pixel..?)            
+            case 2:            
                 prim.numOfPointInPoly = 1;
                 
                 // ?

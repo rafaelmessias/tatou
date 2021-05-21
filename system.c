@@ -191,7 +191,7 @@ void initRenderer()
     glEnable(GL_DEPTH_TEST);
     // glEnable(GL_MULTISAMPLE);
     glEnable(GL_POINT_SMOOTH);
-    // glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
     SDL_GL_SetSwapInterval(1);
 }
 

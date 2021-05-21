@@ -5,7 +5,7 @@
 #include "model.h"
 
 
-int ModelIndex = 12;
+int ModelIndex = 263;
 int primHighlight = 0;
 int isDebugPrim = 0;
 
@@ -120,10 +120,13 @@ void renderLoop()
 
                 case 2:
                     // TODO Actually a sphere, or disc
+                    glPointSize(5.0f);
                     mode = GL_POINTS;
                     break;
 
                 case 3:
+                    // Just to make sure the size is correct
+                    glPointSize(1.0f);
                     mode = GL_POINTS;
                     break;
 
@@ -136,6 +139,10 @@ void renderLoop()
             // NOTE prim.indices is malloc'd, so 'sizeof(prim.indices)' doesn't work
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);            
             glDrawElements(mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
+
+            // Debug
+            // glPointSize(1.0f);
+            // glDrawElements(GL_POINTS, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
         }
 
         // TODO Move this to inside the previous loop (with an if), to avoid re-buffering the elements
