@@ -64,3 +64,6 @@ ITD_RESS
   * It seems there are at least two unknown primitive types so far, 6 and 7.
     - Prim. type 7 are the Bastard's cubes.
     - Prim. type 7 are related to the skeleton driver's eyes (not sure exactly how to handle them yet).
+
+  * Not 100% sure, but it seems that the skeleton driver is mirrored horizontally..? I wonder if it
+    happens with other models and if that is indicated by a flag, or something else.
