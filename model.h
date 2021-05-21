@@ -25,3 +25,4 @@ void getCentroid(vec3 r);
 float getRadius(vec3 centroid);
 void dumpPrim(int);
 void dumpModel();
+void dumpBytes(uint8_t *ptr, int num, int rowLen);

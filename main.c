@@ -5,9 +5,9 @@
 #include "model.h"
 
 
-int ModelIndex = 6;
+int ModelIndex = 12;
 int primHighlight = 0;
-int isDebugPrim = 1;
+int isDebugPrim = 0;
 
 
 // TODO Make a "model" struct for this
@@ -138,6 +138,7 @@ void renderLoop()
             glDrawElements(mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
         }
 
+        // TODO Move this to inside the previous loop (with an if), to avoid re-buffering the elements
         if (isDebugPrim)
         {
             Primitive prim = allPrims[primHighlight]; 
@@ -154,11 +155,36 @@ void renderLoop()
             glDepthFunc(GL_LESS);
         }
 
+        // GLubyte pixels[320*200*4];
+        // glReadPixels(0, 0, 320, 200, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        // dumpBytes(pixels, 320*200*4, 4 * 12);
+        // exit(0);
+
+
         /* Sleep */
         // SDL_Delay(1000);
 
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, Fbo);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        // glDrawBuffer(GL_BACK);
+        glBlitFramebuffer(
+            0, 0, X_INT, Y_INT,
+            0, 0, X_RES, Y_RES,
+            GL_COLOR_BUFFER_BIT,
+            GL_NEAREST);
+
+        // glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+        // GLubyte pixels[320*200*4];
+        // glReadPixels(0, 0, 320, 200, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
+        // dumpBytes(pixels, 320*200*4, 4 * 12);
+        // exit(0);
+
+        // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
         // Since I am using VSYNC, this will "wait" as long as necessary
         SDL_GL_SwapWindow(Window);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
 
         // SDL_Delay(1000.0f/60.0f);
 

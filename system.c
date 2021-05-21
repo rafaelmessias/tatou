@@ -3,7 +3,7 @@
 
 
 SDL_Window *Window;
-GLuint Vbo, Vao, Ebo;
+GLuint Fbo;
 GLint ColorLocation;
 uint8_t Palette[256 * 3];
 
@@ -50,8 +50,8 @@ void initAll() {
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 );
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 2 );
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
+    // SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    // SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
     // glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
 
     Window = SDL_CreateWindow(
@@ -89,16 +89,16 @@ void initAll() {
 
 
 void initRenderer()
-{    
-    // TODO The Vbo and Vao here do not need to be global... maybe model-specific?
+{
+    GLuint vbo, vao, ebo, rbo, dbo;
 
     // Generate a vertex buffer in GPU memory, make it active, then copy the vertices to it
-    glGenBuffers(1, &Vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, Vbo);
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
     // Generate a vertex array, make it active, and specify it
-	glGenVertexArrays(1, &Vao);
-	glBindVertexArray(Vao);
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
     // A vertex array describes a vertex buffer: here it says "position 0, with 3 floats per vertex"
     // The position refers to how it will be accessed by the shaders later
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -108,8 +108,32 @@ void initRenderer()
     glEnableVertexAttribArray(0);
 
     // NOTE As soon as this Ebo is bound, glDrawElements will expect it to be used, so make sure it works.
-    glGenBuffers(1, &Ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Ebo);
+    glGenBuffers(1, &ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+
+    // Setup an off-screen framebuffer for drawing to    
+    glGenFramebuffers(1, &Fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
+    // This is the "color" attachment to our offscreen buffer, which is where pixels are drawn
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    // Right now the offscreen buffer is always 2x the window resolution, so the models are supersampled.
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, X_INT, Y_INT);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rbo);
+    // We also need to create and attach a depth buffer, for depth testing
+    glGenRenderbuffers(1, &dbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, dbo);
+    // Right now the offscreen buffer is always 2x the window resolution, so the models are supersampled.
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, X_INT, Y_INT);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, dbo);
+
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        printf("Framebuffer is not complete %d.\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+        exit(-1);
+    }
+    // exit(0);
+    glViewport(0, 0, X_INT, Y_INT);
 
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, (const GLchar**)&vertexSrc, 0);
@@ -165,7 +189,7 @@ void initRenderer()
     glUseProgram(shaderProg);
 
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_MULTISAMPLE);
+    // glEnable(GL_MULTISAMPLE);
     glEnable(GL_POINT_SMOOTH);
     // glEnable(GL_CULL_FACE);
     SDL_GL_SetSwapInterval(1);

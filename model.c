@@ -38,11 +38,13 @@ void dumpModel()
 }
 
 
-void dumpBytes(uint8_t *ptr, int num)
+void dumpBytes(uint8_t *ptr, int num, int rowLen)
 {
     for (int i = 0; i < num; ++i)
     {
-        printf("%d ", *ptr++);
+        if (i % rowLen == 0)
+            printf("\n");
+        printf("%03d ", *ptr++);
     }
     printf("\n");
 }
@@ -140,6 +142,7 @@ void loadModel(const char* pakName, int index)
 
     // Bounding Box
     memcpy(bbox, data, 6 * sizeof(int16_t));
+    // dumpBytes(data, 12);
     data += 12;
 
     // Compute center point from bounding box, forced to float
@@ -152,28 +155,36 @@ void loadModel(const char* pakName, int index)
 
     // No idea what this offset is; seems to be zero many times?
 	uint16_t offset = *(uint16_t *)data;
+    // dumpBytes(data, 2);
 	data += 2;
 
+    // dumpBytes(data, offset);
     data += offset;
+
 	numOfVertices = *(uint16_t *)data;
+    // dumpBytes(data, 2);
 	data += 2;
     // printf("%d\n", numOfVertices);
     
     // We'll reuse the global vertex buffer
     if (allCoords != NULL)
         free(allCoords);
+
     // Read three coordinates (signed 16 bits each) per point
     // TODO Use memcpy, or some custom specialized function
     allCoords = (float *)malloc(numOfVertices * sizeof(float) * 3);
+    // dumpBytes(data, numOfVertices * 6);
+
+    // for (int i = 0; i < numOfVertices * 6; i += 6)
+    // {
+    //     dumpBytes(data + i, 6);
+    // }
+
 	for (int i = 0; i < numOfVertices * 3; ++i)
 	{
         // Even though allCoords is float (4 bytes), the actual coordinates are stored with two bytes
 		allCoords[i] = *(int16_t *)data;
-		data += 2;
-
-        // if (i > 0 && i % 3 == 0)
-        //     printf("\n");
-        // printf("%f", allCoords[i]);
+        data += 2;
 	}
 
     if (flags & 2)
@@ -181,12 +192,14 @@ void loadModel(const char* pakName, int index)
         printf("Model has bones.\n");
 
         numBones = *(uint16_t *)data;
+        // dumpBytes(data, 2);
         data += 2;
 
         int sizeOfBoneOffsets = numBones * sizeof(uint16_t);
         
         boneOffsets = (uint16_t *)malloc(sizeOfBoneOffsets);
         memcpy(boneOffsets, data, sizeOfBoneOffsets);
+        // dumpBytes(data, sizeOfBoneOffsets);
         data += sizeOfBoneOffsets;
 
         // TODO This routine for reading bones is really messy right now.
@@ -194,12 +207,14 @@ void loadModel(const char* pakName, int index)
         // The 'data' pointer must remain fixed throughout the loop, we only
         //   add the accumulated offset at the end.
         int accumBoneOffset = 0;
-        // To be honest I don't really see the point of the offsets... we might
-        //   as well just loop over all bones in the file order.
+        // Why do we need bone offsets (in a specific order) if we are actually
+        //   iterating over the bones in file order?
         for (int i = 0; i < numBones; ++i)
         {
             // boneData must be a byte type to simplify pointer arithmetic
             // uint8_t *boneData = data + boneOffsets[i];
+
+            // TODO I think boneData could actually be uint16_t?
             uint8_t *boneData = data;
             if(flags & 8)
             {
@@ -211,14 +226,17 @@ void loadModel(const char* pakName, int index)
                 // for (int j = 0; j < 8; ++j)
                 //     printf("%d ", *(uint16_t *)(boneData + j * 2));
                 // printf("\n");
-                uint16_t firstVertexOffset = *(uint16_t *)boneData / 2;
+
+                // TODO Should all these offsets be divisible by 6? 
+                uint16_t firstVertexOffset = (*(uint16_t *)boneData) / 2;
+
                 // vec3 firstVertex; 
                 // getVertex(allCoords, firstVertexOffset, firstVertex);
                 // printf("%f %f %f\n", firstVertex[0], firstVertex[1], firstVertex[2]);
 
                 uint16_t numSubVertex = *(uint16_t *)(boneData + 2);
                                 
-                uint16_t refVertexOffset = *(uint16_t *)(boneData + 4) / 2;
+                uint16_t refVertexOffset = (*(uint16_t *)(boneData + 4)) / 2;
                 // vec3 refVertex; 
                 // getVertex(allCoords, *(uint16_t *)(boneData + 4), refVertex);
                 // printf("%f %f %f\n", refVertex[0], refVertex[1], refVertex[2]);
@@ -229,10 +247,11 @@ void loadModel(const char* pakName, int index)
                     allCoords[refVertexOffset + 2]
                 };
 
-                uint16_t unknownFlag = *(uint16_t *)(boneData + 6);
-                uint16_t type = *(uint16_t *)(boneData + 8);
+                // uint16_t unknownFlag = *(uint16_t *)(boneData + 6);
+                // uint16_t type = *(uint16_t *)(boneData + 8);
+                
                 // Three rotation angles (I think...?)                
-                uint16_t *rotVec3 = (uint16_t *)(boneData + 10);
+                // uint16_t *rotVec3 = (uint16_t *)(boneData + 10);
                 
                 // printf("bone offset: %d, type: %d\n", boneOffsets[i], type);
                 // printf("  rot: %d %d %d\n", rotVec3[0], rotVec3[1], rotVec3[2]);
@@ -249,6 +268,8 @@ void loadModel(const char* pakName, int index)
                     curVertexOffset += 3;
                 }
                 
+                // dumpBytes(data, 16);    
+
                 // accumBoneOffset += 16;
                 data += 16;
             }
@@ -257,6 +278,7 @@ void loadModel(const char* pakName, int index)
     }
 
     numPrim = *(uint16_t *)data;
+    // dumpBytes(data, 2);
 	data += 2;
 
     // Reuse the global
@@ -267,6 +289,7 @@ void loadModel(const char* pakName, int index)
     }
     
     allPrims = (Primitive *)malloc(numPrim * sizeof(Primitive));
+    // dumpBytes(data, 160);
 
     dumpModel();
 	int abortPrims = 0;
@@ -347,6 +370,7 @@ void loadModel(const char* pakName, int index)
                 //   which are unknown to me at this point. If that happens, stop reading the
                 //   model but do not abort the program.
                 abortPrims = 1;
+                // TODO Can I infer the size of each primitive by looking at the size of the PAK?
         }
 
         if (abortPrims)
