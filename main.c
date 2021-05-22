@@ -35,6 +35,8 @@ void renderLoop()
         M[0][0] = (float) Y_RES / (float) X_RES;
 
         Uint32 newTicks = SDL_GetTicks();
+
+        mat4x4_rotate_X(M, M, -M_PI / 6);
         
         // Third: Rotate.
         // How many seconds ellapsed since the first frame, times the desired
@@ -46,7 +48,6 @@ void renderLoop()
         //   reset for each frame.
         mat4x4_rotate_Y(M, M, ((newTicks - ticks) / 1000.0f) * radPerSec);
         mat4x4_rotate_Z(M, M, M_PI);
-        // mat4x4_rotate_X(M, M, M_PI / 2);
         
         // Second: Scale to something less than the unit sphere, so that the
         //   entire model fits into the screen given any rotation.
