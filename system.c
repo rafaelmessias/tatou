@@ -5,6 +5,7 @@
 SDL_Window *Window;
 GLuint Fbo;
 GLint ColorLocation;
+// TODO use a 2D array instead
 uint8_t Palette[256 * 3];
 
 
@@ -196,7 +197,8 @@ void initRenderer()
 }
 
 
-// Maybe use an enum?
+// TODO Maybe use an enum?
+// TODO Could I use loadPakToPtr instead, and avoid the tmpPal?
 void loadPalette(int paletteId) {
     uint8_t *tmpPal;
     if (paletteId == TATOU_PAL)

@@ -1,18 +1,29 @@
 #include <stdlib.h>
 #include "model.h"
+#include "system.h"
 
 
+// TODO Make a "Model" struct
+// TODO Make allCoords a vertex buffer of vec3's
+// NOTE Remember: global pointers must be heap-allocated (that's why we do it here)
 void loadCube()
 {
-    // NOTE Remember: globals MUST be heap-allocated (that's why we do it here)
-
-    // TODO Make a "Model" struct
+    // Setup a palette with known colors for the first 6 primitives (ignore the rest)
+    uint8_t tmpPal[] =
+    {
+          0, 0,   255,  // Front, blue
+          0, 255,   0,  // Left, green
+          0, 255, 255,  // Back, cyan
+        255,   0,   0,  // Right, red
+        255,   0, 255,  // Top, magenta
+        255, 255,   0,  // Bottom, yellow
+    };
+    memcpy(Palette, tmpPal, sizeof(tmpPal));
 
     numOfVertices = 8;
     
     if (allCoords != NULL)
         free(allCoords);
-    // TODO Make allCoords a vertex buffer of vec3's
     allCoords = (float *)malloc(numOfVertices * sizeof(float) * 3);
 
     numPrim = 6;
@@ -50,7 +61,7 @@ void loadCube()
     for (int i = 0; i < numPrim; ++i)
     {
         allPrims[i].type = PRIM_POLY;
-        allPrims[i].colorIndex = 100 + i;
+        allPrims[i].colorIndex = i;
         allPrims[i].numOfPointInPoly = 4;
         allPrims[i].indices = (uint16_t *)malloc(allPrims[i].numOfPointInPoly * sizeof(uint16_t));
         int offset = i * allPrims[i].numOfPointInPoly;

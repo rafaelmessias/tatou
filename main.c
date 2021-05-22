@@ -289,7 +289,7 @@ int main(int argv, char* argc[]) {
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    loadPalette(DEFAULT_PAL);
+    // loadPalette(DEFAULT_PAL);
     // loadModel("LISTBOD2", ModelIndex);
 
     // loadTatou();
