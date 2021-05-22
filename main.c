@@ -13,9 +13,9 @@ int isDebugPrim = 0;
 // TODO Make a "model" struct for this
 void renderLoop()
 {
-    vec3 c;
-    getCentroid(c);
-    float r = getRadius(c);
+    // vec3 c;
+    // getCentroid(c);
+    // float r = getRadius(c);
     // printf("%f\n", r);
 
     float radPerSec = 2 * M_PI / 5;
@@ -50,7 +50,7 @@ void renderLoop()
         
         // Second: Scale to something less than the unit sphere, so that the
         //   entire model fits into the screen given any rotation.
-        mat4x4_scale(M, M, 0.95f / r);
+        // mat4x4_scale(M, M, 0.95f / r);
         // M[3][3] = 1.0;
 
         // First: translate to origin

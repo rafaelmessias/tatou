@@ -411,8 +411,12 @@ void loadModel(const char* pakName, int index)
     // getCentroid(c);
     // printf("%f %f %f\n", c[0], c[1], c[2]);
 
-    // TODO vectorize
+    // TODO I'm not sure why the order of the matrix multiplication here is inverted
+    
     mat4x4_translate(M, -bbCenter[0], -bbCenter[1], -bbCenter[2]);
+
+    float r = getRadius(bbCenter);
+    mat4x4_scale(M, M, 0.95f / r);
 
     applyMatrix(M, NULL);
 
