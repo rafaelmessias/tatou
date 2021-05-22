@@ -303,7 +303,7 @@ void loadModel(const char* pakName, int index)
         switch (prim.type)
         {
             // Line
-            case 0:
+            case PRIM_LINE:
                 prim.numOfPointInPoly = 2;
 			
                 // ?

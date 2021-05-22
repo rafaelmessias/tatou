@@ -5,12 +5,22 @@
 typedef struct {
     uint8_t type;
     uint8_t colorIndex;
-    uint16_t* indices;
     uint8_t numOfPointInPoly;
+    uint16_t* indices;
     uint16_t discSize;
-    // GLenum mode;
 } Primitive;
 
+
+typedef enum {
+    PRIM_LINE,
+    PRIM_POLY,
+    PRIM_POINT,
+    PRIM_CIRCLE, // DISC...?
+    PRIM_UNK_4,
+    PRIM_UNK_5,
+    PRIM_SQUARE,
+    PRIM_UNK_6
+} PrimType;
 
 // Global variables that store the current model
 extern float *allCoords;

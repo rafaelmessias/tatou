@@ -3,6 +3,7 @@
 #include "linmath.h"
 #include "pak.h"
 #include "model.h"
+#include "misc.h"
 
 
 int ModelIndex = 263;
@@ -36,6 +37,8 @@ void renderLoop()
 
         Uint32 newTicks = SDL_GetTicks();
 
+        // The negative here is because the models are upside down, at first,
+        //   then Z-rotated 180 deg.
         mat4x4_rotate_X(M, M, -M_PI / 6);
         
         // Third: Rotate.
@@ -47,7 +50,7 @@ void renderLoop()
         //   track of the current angle and add to it, because the model is 
         //   reset for each frame.
         mat4x4_rotate_Y(M, M, ((newTicks - ticks) / 1000.0f) * radPerSec);
-        mat4x4_rotate_Z(M, M, M_PI);
+        // mat4x4_rotate_Z(M, M, M_PI);
         
         // Second: Scale to something less than the unit sphere, so that the
         //   entire model fits into the screen given any rotation.
@@ -115,7 +118,7 @@ void renderLoop()
                     mode = GL_LINES;
                     break;
 
-                case 1:
+                case PRIM_POLY:
                     mode = GL_TRIANGLE_FAN;
                     break;
 
@@ -287,9 +290,11 @@ int main(int argv, char* argc[]) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     loadPalette(DEFAULT_PAL);
-    loadModel("LISTBOD2", ModelIndex);
+    // loadModel("LISTBOD2", ModelIndex);
 
     // loadTatou();
+
+    loadCube();
 
     renderLoop();
 }
