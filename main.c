@@ -26,6 +26,7 @@ void renderLoop()
     int quit = 0;
     while (!quit)
     {
+        
         mat4x4_identity(M);
 
         // Last: Correct aspect ratio by shrinking the X coordinate.
@@ -140,10 +141,15 @@ void renderLoop()
                     mode = GL_LINE_LOOP;
                     break;
             }
+
+            // TODO Apparently, the Vao must be bound before the Ebo data is buffered
+            glBindVertexArray(Vao);
             
             // NOTE prim.indices is malloc'd, so 'sizeof(prim.indices)' doesn't work
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);            
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);
+
             glDrawElements(mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
+            glBindVertexArray(0);
 
             // Debug
             // glPointSize(1.0f);
@@ -305,7 +311,7 @@ int main(int argv, char* argc[]) {
 
     // loadCube();
 
-    loadCircle();
+    loadCircleAsPoly();
 
     renderLoop();
 }

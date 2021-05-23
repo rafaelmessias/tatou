@@ -3,7 +3,7 @@
 
 
 SDL_Window *Window;
-GLuint Fbo;
+GLuint Vao, Fbo;
 GLint ColorLocation;
 // TODO use a 2D array instead
 uint8_t Palette[256 * 3];
@@ -91,15 +91,16 @@ void initAll() {
 
 void initRenderer()
 {
-    GLuint vbo, vao, ebo, rbo, dbo;
+    GLuint vbo, ebo, rbo, dbo;
+
+    // Generate a vertex array, make it active, and specify it
+	glGenVertexArrays(1, &Vao);
+	glBindVertexArray(Vao);
 
     // Generate a vertex buffer in GPU memory, make it active, then copy the vertices to it
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    // Generate a vertex array, make it active, and specify it
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+    
     // A vertex array describes a vertex buffer: here it says "position 0, with 3 floats per vertex"
     // The position refers to how it will be accessed by the shaders later
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -111,6 +112,9 @@ void initRenderer()
     // NOTE As soon as this Ebo is bound, glDrawElements will expect it to be used, so make sure it works.
     glGenBuffers(1, &ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+
+    // TODO Apparently, the Ebo must be included in the Vao's definition
+    glBindVertexArray(0);
 
     // Setup an off-screen framebuffer for drawing to    
     glGenFramebuffers(1, &Fbo);
@@ -127,6 +131,7 @@ void initRenderer()
     // Right now the offscreen buffer is always 2x the window resolution, so the models are supersampled.
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, X_INT, Y_INT);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, dbo);
+    
 
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {

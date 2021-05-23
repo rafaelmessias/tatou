@@ -81,7 +81,7 @@ void loadCube()
 // TODO Maybe a function to initialize an empty model (since this code is repeated a lot)
 //   Parameters: number of vertices, number of primitives
 // TODO This is so complicated for a single primitive, with a single vertex...
-void loadCircle()
+void loadCircleAsPoly()
 {
     // Red
     Palette[0] = 255;
@@ -102,7 +102,7 @@ void loadCircle()
 
     // For lazyness, I'll just assume that the undefined allCoords are all 0
 
-    // This is just done once, but I'll soon have more than one, so...
+    // TODO this loop is not necessary
     for (int i = 0; i < numPrim; ++i)
     {
         allPrims[i].type = PRIM_POLY;
@@ -126,6 +126,50 @@ void loadCircle()
             // Draw the points in order
             allPrims[i].indices[j] = j;
         }
+    }
+
+    // 50% downscaling just for aesthetics
+    mat4x4 M;
+    mat4x4_identity(M);
+    mat4x4_scale(M, M, 0.5f);
+    applyMatrix(M, NULL);
+}
+
+
+void loadCircle()
+{
+    // Red
+    Palette[0] = 255;
+
+    numOfVertices = 1;
+    if (allCoords != NULL)
+        free(allCoords);
+    allCoords = (float *)malloc(numOfVertices * sizeof(float) * 3);
+    
+    numPrim = 1;
+    if (allPrims != NULL)
+    {
+        free(allPrims);
+        for (int i = 0; i < numPrim; ++i)
+            free(allPrims[i].indices);
+    }
+    allPrims = (Primitive *)malloc(numPrim * sizeof(Primitive));
+
+    // For lazyness, I'll just assume that the undefined allCoords are all 0
+
+    // This is just done once, but I'll soon have more than one, so...
+    for (int i = 0; i < numPrim; ++i)
+    {
+        allPrims[i].type = PRIM_CIRCLE;
+        allPrims[i].colorIndex = i;
+        // Although the circle will be a triangle fan, it only has one vertex in the actual model (the center)
+        //   The rest are artficial points that will be generated on the fly (and without rotation)
+        allPrims[i].numOfPointInPoly = numOfVertices;
+        allPrims[i].indices = (uint16_t *)malloc(numOfVertices * sizeof(uint16_t));
+        allPrims[i].discSize = 1;
+
+        allCoords[0] = allCoords[1] = allCoords[2] = 0.0f;
+        allPrims[i].indices[0] = 0;
     }
 
     // 50% downscaling just for aesthetics
