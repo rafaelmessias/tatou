@@ -50,15 +50,16 @@ void dumpBytes(uint8_t *ptr, int num, int rowLen)
 }
 
 
-void applyMatrix(mat4x4 M, float* out)
+void applyMatrix(mat4x4 M, float* in, int n, float* out)
 {
     if (out == NULL)
     {
-        out = allCoords;
+        out = in;
     }
-    for (int i = 0; i < numOfVertices; ++i) {
+    for (int i = 0; i < n; ++i) 
+    {
         int offset = i * 3;
-        vec4 v = {allCoords[offset], allCoords[offset+1], allCoords[offset+2], 1};
+        vec4 v = {in[offset], in[offset+1], in[offset+2], 1};
         vec4 r;
     //     vec3_scale(r, v, 1.0 / 1000.0);
         mat4x4_mul_vec4(r, M, v);
@@ -418,7 +419,7 @@ void loadModel(const char* pakName, int index)
     float r = getRadius(bbCenter);
     mat4x4_scale(M, M, 0.95f / r);
 
-    applyMatrix(M, NULL);
+    applyMatrix(M, allCoords, numOfVertices, NULL);
 
     // HERE: Scale the model to fit the screen    
     // for (int i = 0; i < numOfVertices * 3; ++i) 

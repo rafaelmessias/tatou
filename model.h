@@ -30,7 +30,7 @@ extern int numPrim;
 
 
 void loadModel(const char* pakName, int index);
-void applyMatrix(mat4x4 M, float* out);
+void applyMatrix(mat4x4 M, float* in, int n, float* out);
 void getCentroid(vec3 r);
 float getRadius(vec3 centroid);
 void dumpPrim(int);

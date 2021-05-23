@@ -73,7 +73,7 @@ void loadCube()
     mat4x4 M;
     mat4x4_identity(M);
     mat4x4_scale(M, M, 0.5f);
-    applyMatrix(M, NULL);
+    applyMatrix(M, allCoords, numOfVertices, NULL);
 
 }
 
@@ -114,7 +114,6 @@ void loadCircleAsPoly()
         // NOTE We don't need the center point; the triangle fan works perfectly
         for (int j = 0; j < numOfVertices; ++j)
         {
-            // Skip the first position (the center)
             int offset = j * 3;
             double angleRad = 2 * M_PI * (float)j / (float)numOfVertices;
             // X
@@ -132,7 +131,7 @@ void loadCircleAsPoly()
     mat4x4 M;
     mat4x4_identity(M);
     mat4x4_scale(M, M, 0.5f);
-    applyMatrix(M, NULL);
+    applyMatrix(M, allCoords, numOfVertices, NULL);
 }
 
 
@@ -176,5 +175,5 @@ void loadCircle()
     mat4x4 M;
     mat4x4_identity(M);
     mat4x4_scale(M, M, 0.5f);
-    applyMatrix(M, NULL);
+    applyMatrix(M, allCoords, numOfVertices, NULL);
 }

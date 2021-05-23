@@ -23,6 +23,31 @@ void renderLoop()
     Uint32 ticks = SDL_GetTicks();
     mat4x4 M;
 
+    // Establish a completely new VAO for rendering circle primitives
+    GLuint cVao, cVbo;
+    glGenVertexArrays(1, &cVao);
+    glGenBuffers(1, &cVbo);
+
+    glBindVertexArray(cVao);
+    glBindBuffer(GL_ARRAY_BUFFER, cVbo);
+    int cNumVertices = 25;
+    float cAllCoords[cNumVertices * 3];
+    for (int i = 0; i < cNumVertices; ++i)
+    {
+        int offset = i * 3;
+        double angleRad = 2 * M_PI * (float)i / (float)cNumVertices;
+        // X
+        cAllCoords[offset] = (float)cos(angleRad);
+        // Y
+        cAllCoords[offset + 1] = (float)sin(angleRad);
+        // Z
+        cAllCoords[offset + 2] = 0.0f;
+    }
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cAllCoords), cAllCoords, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+    glBindVertexArray(0);
+
     int quit = 0;
     while (!quit)
     {
@@ -64,7 +89,7 @@ void renderLoop()
         // mat4x4_translate(M, -c[0], -c[1], -c[2]);
         
         float tmpVbo[numOfVertices * 3];
-        applyMatrix(M, tmpVbo);
+        applyMatrix(M, allCoords, numOfVertices, tmpVbo);
 
         // for (int i = 0; i < numOfVertices; ++i) {
         //     int off = i * 3;
@@ -78,6 +103,9 @@ void renderLoop()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Send the vertices to the GPU
+        // NOTE One important thing to do when programming with OpenGL is to avoid ambiguity, in the name of sanity (e.g. for easier debugging)
+        //   Ex.: I might not have to bind this buffer everytime, but by doing this I know for sure I'm using the right buffer
+        glBindBuffer(GL_ARRAY_BUFFER, Vbo);
         glBufferData(GL_ARRAY_BUFFER, sizeof(tmpVbo), tmpVbo, GL_STATIC_DRAW);
         
         for (int i = 0; i < numPrim; ++i) 
@@ -126,8 +154,8 @@ void renderLoop()
 
                 case PRIM_CIRCLE:
                     // TODO Actually a sphere, or disc
-                    glPointSize(10.0f);
-                    mode = GL_POINTS;
+                    // glPointSize(10.0f);
+                    // mode = GL_POINTS;
                     break;
 
                 case PRIM_POINT:
@@ -142,26 +170,32 @@ void renderLoop()
                     break;
             }
 
-            // TODO Apparently, the Vao must be bound before the Ebo data is buffered
-            glBindVertexArray(Vao);
-            
-            // NOTE prim.indices is malloc'd, so 'sizeof(prim.indices)' doesn't work
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);
-
-            glDrawElements(mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
-            glBindVertexArray(0);
-
             // Debug
             // glPointSize(1.0f);
             // glDrawElements(GL_POINTS, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
 
             if (prim.type == PRIM_CIRCLE)
             {
-                // Initialize a unit circle
+                glBindVertexArray(cVao);
                 // Scale to prim.discSize
                 // Translate to the center point (prim.indices[0])
                 // No rotation!
+                glDrawArrays(GL_TRIANGLE_FAN, 0, cNumVertices);
             }
+            else
+            {
+                // TODO Apparently, the Vao must be bound before the Ebo data is buffered
+                glBindVertexArray(Vao);
+                
+                // NOTE prim.indices is malloc'd, so 'sizeof(prim.indices)' doesn't work
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);
+
+                glDrawElements(mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
+            }
+            // NOTE Although this doesn't matter much, it's a good practice to unbind in order to avoid inadvertently
+            //   changing something in the VAO in some other part of the code. However, this also means that you
+            //   cannot *assume* that it's bound; whenever you need to use it, you must explicitly bind it.
+            glBindVertexArray(0);
         }
 
         // TODO Move this to inside the previous loop (with an if), to avoid re-buffering the elements
@@ -311,7 +345,8 @@ int main(int argv, char* argc[]) {
 
     // loadCube();
 
-    loadCircleAsPoly();
+    // loadCircleAsPoly();
+    loadCircle();
 
     renderLoop();
 }

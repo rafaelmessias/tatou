@@ -3,7 +3,7 @@
 
 
 SDL_Window *Window;
-GLuint Vao, Fbo;
+GLuint Vao, Vbo, Fbo;
 GLint ColorLocation;
 // TODO use a 2D array instead
 uint8_t Palette[256 * 3];
@@ -91,26 +91,29 @@ void initAll() {
 
 void initRenderer()
 {
-    GLuint vbo, ebo, rbo, dbo;
+    GLuint ebo, rbo, dbo;
 
-    // Generate a vertex array, make it active, and specify it
 	glGenVertexArrays(1, &Vao);
+    glGenBuffers(1, &Vbo);
+    glGenBuffers(1, &ebo);
+
+    // Make the main vertex array active, and specify it
 	glBindVertexArray(Vao);
 
     // Generate a vertex buffer in GPU memory, make it active, then copy the vertices to it
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, Vbo);
     
     // A vertex array describes a vertex buffer: here it says "position 0, with 3 floats per vertex"
     // The position refers to how it will be accessed by the shaders later
+    // As far as I understand, this consolidates the connection between Vao and vbo
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     // Enabling is different than binding it (i.e. making it active). Only one
     //   VAO can be bound at any time, but multiple can be enabled (and used at
     //   the same time by shaders).
+    // TODO Shouldn't I be taking the position from the shader program, instead of using 0?
     glEnableVertexAttribArray(0);
 
     // NOTE As soon as this Ebo is bound, glDrawElements will expect it to be used, so make sure it works.
-    glGenBuffers(1, &ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 
     // TODO Apparently, the Ebo must be included in the Vao's definition

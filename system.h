@@ -14,7 +14,7 @@
 #define TATOU_PAL 1
 
 
-extern GLuint Vao, Fbo;
+extern GLuint Vao, Vbo, Fbo;
 extern SDL_Window *Window;
 extern GLint ColorLocation;
 extern uint8_t Palette[256 * 3];
