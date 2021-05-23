@@ -1,1 +1,2 @@
 void loadCube();
+void loadCircle();

@@ -39,7 +39,8 @@ void renderLoop()
 
         // The negative here is because the models are upside down, at first,
         //   then Z-rotated 180 deg.
-        mat4x4_rotate_X(M, M, -M_PI / 6);
+        // TODO The renderer shouldn't know this; the model should fix itself
+        // mat4x4_rotate_X(M, M, -M_PI / 6);
         
         // Third: Rotate.
         // How many seconds ellapsed since the first frame, times the desired
@@ -49,7 +50,7 @@ void renderLoop()
         // If I checked the time ellapsed since the last frame I'd have to keep
         //   track of the current angle and add to it, because the model is 
         //   reset for each frame.
-        mat4x4_rotate_Y(M, M, ((newTicks - ticks) / 1000.0f) * radPerSec);
+        // mat4x4_rotate_Y(M, M, ((newTicks - ticks) / 1000.0f) * radPerSec);
         // mat4x4_rotate_Z(M, M, M_PI);
         
         // Second: Scale to something less than the unit sphere, so that the
@@ -114,7 +115,7 @@ void renderLoop()
             GLenum mode;
             switch (prim.type)
             {
-                case 0:
+                case PRIM_LINE:
                     mode = GL_LINES;
                     break;
 
@@ -122,13 +123,13 @@ void renderLoop()
                     mode = GL_TRIANGLE_FAN;
                     break;
 
-                case 2:
+                case PRIM_CIRCLE:
                     // TODO Actually a sphere, or disc
-                    glPointSize(5.0f);
+                    glPointSize(10.0f);
                     mode = GL_POINTS;
                     break;
 
-                case 3:
+                case PRIM_POINT:
                     // Just to make sure the size is correct
                     glPointSize(1.0f);
                     mode = GL_POINTS;
@@ -147,6 +148,14 @@ void renderLoop()
             // Debug
             // glPointSize(1.0f);
             // glDrawElements(GL_POINTS, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
+
+            if (prim.type == PRIM_CIRCLE)
+            {
+                // Initialize a unit circle
+                // Scale to prim.discSize
+                // Translate to the center point (prim.indices[0])
+                // No rotation!
+            }
         }
 
         // TODO Move this to inside the previous loop (with an if), to avoid re-buffering the elements
@@ -294,7 +303,9 @@ int main(int argv, char* argc[]) {
 
     // loadTatou();
 
-    loadCube();
+    // loadCube();
+
+    loadCircle();
 
     renderLoop();
 }
