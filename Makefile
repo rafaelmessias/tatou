@@ -32,7 +32,7 @@ OBJ_NAME = tatou
 all : $(OBJS)
 	$(CC) $(OBJS) $(INCLUDE_PATHS) $(LIBRARY_PATHS) $(COMPILER_FLAGS) $(LINKER_FLAGS) -o $(OBJ_NAME)
 
-sandbox: 
+sandbox: sandbox.c
 	$(CC) sandbox.c $(INCLUDE_PATHS) $(LIBRARY_PATHS) $(COMPILER_FLAGS) $(LINKER_FLAGS) -o sandbox
 
 clean:
