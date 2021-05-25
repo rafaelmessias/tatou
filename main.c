@@ -14,11 +14,6 @@ int isDebugPrim = 0;
 // TODO Make a "model" struct for this
 void renderLoop()
 {
-    // vec3 c;
-    // getCentroid(c);
-    // float r = getRadius(c);
-    // printf("%f\n", r);
-
     float radPerSec = 2 * M_PI / 5;
     Uint32 ticks = SDL_GetTicks();
     mat4x4 M;
@@ -26,6 +21,7 @@ void renderLoop()
     int quit = 0;
     while (!quit)
     {
+        
         mat4x4_identity(M);
 
         // Last: Correct aspect ratio by shrinking the X coordinate.
@@ -39,7 +35,8 @@ void renderLoop()
 
         // The negative here is because the models are upside down, at first,
         //   then Z-rotated 180 deg.
-        mat4x4_rotate_X(M, M, -M_PI / 6);
+        // TODO The renderer shouldn't know this; the model should fix itself
+        mat4x4_rotate_X(M, M, -M_PI / 8);
         
         // Third: Rotate.
         // How many seconds ellapsed since the first frame, times the desired
@@ -50,7 +47,7 @@ void renderLoop()
         //   track of the current angle and add to it, because the model is 
         //   reset for each frame.
         mat4x4_rotate_Y(M, M, ((newTicks - ticks) / 1000.0f) * radPerSec);
-        // mat4x4_rotate_Z(M, M, M_PI);
+        mat4x4_rotate_Z(M, M, M_PI);
         
         // Second: Scale to something less than the unit sphere, so that the
         //   entire model fits into the screen given any rotation.
@@ -62,7 +59,7 @@ void renderLoop()
         // mat4x4_translate(M, -c[0], -c[1], -c[2]);
         
         float tmpVbo[numOfVertices * 3];
-        applyMatrix(M, tmpVbo);
+        applyMatrix(M, allCoords, numOfVertices, tmpVbo);
 
         // for (int i = 0; i < numOfVertices; ++i) {
         //     int off = i * 3;
@@ -76,6 +73,9 @@ void renderLoop()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Send the vertices to the GPU
+        // NOTE One important thing to do when programming with OpenGL is to avoid ambiguity, in the name of sanity (e.g. for easier debugging)
+        //   Ex.: I might not have to bind this buffer everytime, but by doing this I know for sure I'm using the right buffer
+        glBindBuffer(GL_ARRAY_BUFFER, Vbo);
         glBufferData(GL_ARRAY_BUFFER, sizeof(tmpVbo), tmpVbo, GL_STATIC_DRAW);
         
         for (int i = 0; i < numPrim; ++i) 
@@ -96,25 +96,10 @@ void renderLoop()
             //     printf("  %d %f %f %f\n", off, v[0], v[1], v[2]);
             // }
 
-            // This only works on Windows (didn't test Linux)
-            // glDrawElements(prim.mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, prim.indices);
-
-            // It turns out that OSX cannot use CPU-based indices with glDrawElements,
-            //   so they need to be moved to the GPU.
-            
-            // TODO This is really inefficient, but I don't know how to fix it.
-
-            // TODO Make an Enum for primitive type
-            // if (prim.type == 3)
-            // {
-                   // TODO Need to scale this correctly before using it 
-            //     glPointSize(prim.discSize);
-            // }
-
             GLenum mode;
             switch (prim.type)
             {
-                case 0:
+                case PRIM_LINE:
                     mode = GL_LINES;
                     break;
 
@@ -122,13 +107,13 @@ void renderLoop()
                     mode = GL_TRIANGLE_FAN;
                     break;
 
-                case 2:
+                case PRIM_CIRCLE:
                     // TODO Actually a sphere, or disc
-                    glPointSize(5.0f);
+                    glPointSize(10.0f);
                     mode = GL_POINTS;
                     break;
 
-                case 3:
+                case PRIM_POINT:
                     // Just to make sure the size is correct
                     glPointSize(1.0f);
                     mode = GL_POINTS;
@@ -139,14 +124,26 @@ void renderLoop()
                     mode = GL_LINE_LOOP;
                     break;
             }
-            
-            // NOTE prim.indices is malloc'd, so 'sizeof(prim.indices)' doesn't work
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);            
-            glDrawElements(mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
 
             // Debug
             // glPointSize(1.0f);
             // glDrawElements(GL_POINTS, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
+
+            // TODO Apparently, the Vao must be bound before the Ebo data is buffered
+            glBindVertexArray(Vao);
+
+            // It turns out that OSX cannot use CPU-based indices with glDrawElements,
+            //   so they need to be moved to the GPU, to an element buffer.
+            
+            // NOTE prim.indices is malloc'd, so 'sizeof(prim.indices)' doesn't work
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);
+
+            glDrawElements(mode, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
+
+            // NOTE Although this doesn't matter much, it's a good practice to unbind in order to avoid inadvertently
+            //   changing something in the VAO in some other part of the code. However, this also means that you
+            //   cannot *assume* that it's bound; whenever you need to use it, you must explicitly bind it.
+            glBindVertexArray(0);
         }
 
         // TODO Move this to inside the previous loop (with an if), to avoid re-buffering the elements
@@ -154,10 +151,6 @@ void renderLoop()
         {
             Primitive prim = allPrims[primHighlight]; 
             glUniform4f(ColorLocation, 1.0f, 1.0f, 1.0f, 0.5f);
-            // glEnable(GL_POINT_SMOOTH);
-            // glEnable(GL_BLEND);
-            // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            // glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
             glPointSize(2.0f);
             glDepthFunc(GL_ALWAYS);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, prim.numOfPointInPoly * 2, prim.indices, GL_STATIC_DRAW);        
@@ -165,15 +158,6 @@ void renderLoop()
             glDrawElements(GL_LINE_LOOP, prim.numOfPointInPoly, GL_UNSIGNED_SHORT, 0);
             glDepthFunc(GL_LESS);
         }
-
-        // GLubyte pixels[320*200*4];
-        // glReadPixels(0, 0, 320, 200, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-        // dumpBytes(pixels, 320*200*4, 4 * 12);
-        // exit(0);
-
-
-        /* Sleep */
-        // SDL_Delay(1000);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, Fbo);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -262,18 +246,6 @@ void renderLoop()
 }
 
 
-// Offsets from Pak files always come in intervals of 6 bytes, because they
-//   point to the beginning of a vertex, which is 6 bytes long. I divide them
-//   by 2 because I need them in intervals of 3, since there are three
-//   consecutive floats per vertex in my buffer.
-// void getVertex(float *vertexBuffer, u16 offset, vec3 out)
-// {    
-//     out[0] = vertexBuffer[offset/2];
-//     out[1] = vertexBuffer[offset/2+1];
-//     out[2] = vertexBuffer[offset/2+2];
-// }
-
-
 void loadTatou() 
 {    
     loadPalette(TATOU_PAL);
@@ -289,12 +261,10 @@ int main(int argv, char* argc[]) {
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // loadPalette(DEFAULT_PAL);
-    // loadModel("LISTBOD2", ModelIndex);
+    loadPalette(DEFAULT_PAL);
+    loadModel("LISTBOD2", ModelIndex);
 
     // loadTatou();
-
-    loadCube();
 
     renderLoop();
 }

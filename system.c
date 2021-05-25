@@ -3,7 +3,7 @@
 
 
 SDL_Window *Window;
-GLuint Fbo;
+GLuint Vao, Vbo, Fbo;
 GLint ColorLocation;
 // TODO use a 2D array instead
 uint8_t Palette[256 * 3];
@@ -91,26 +91,33 @@ void initAll() {
 
 void initRenderer()
 {
-    GLuint vbo, vao, ebo, rbo, dbo;
+    GLuint ebo, rbo, dbo;
+
+	glGenVertexArrays(1, &Vao);
+    glGenBuffers(1, &Vbo);
+    glGenBuffers(1, &ebo);
+
+    // Make the main vertex array active, and specify it
+	glBindVertexArray(Vao);
 
     // Generate a vertex buffer in GPU memory, make it active, then copy the vertices to it
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    // Generate a vertex array, make it active, and specify it
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, Vbo);
+    
     // A vertex array describes a vertex buffer: here it says "position 0, with 3 floats per vertex"
     // The position refers to how it will be accessed by the shaders later
+    // As far as I understand, this consolidates the connection between Vao and vbo
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     // Enabling is different than binding it (i.e. making it active). Only one
     //   VAO can be bound at any time, but multiple can be enabled (and used at
     //   the same time by shaders).
+    // TODO Shouldn't I be taking the position from the shader program, instead of using 0?
     glEnableVertexAttribArray(0);
 
     // NOTE As soon as this Ebo is bound, glDrawElements will expect it to be used, so make sure it works.
-    glGenBuffers(1, &ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+
+    // TODO Apparently, the Ebo must be included in the Vao's definition
+    glBindVertexArray(0);
 
     // Setup an off-screen framebuffer for drawing to    
     glGenFramebuffers(1, &Fbo);
@@ -127,6 +134,7 @@ void initRenderer()
     // Right now the offscreen buffer is always 2x the window resolution, so the models are supersampled.
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, X_INT, Y_INT);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, dbo);
+    
 
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
@@ -191,8 +199,11 @@ void initRenderer()
 
     glEnable(GL_DEPTH_TEST);
     // glEnable(GL_MULTISAMPLE);
-    glEnable(GL_POINT_SMOOTH);
+    // glEnable(GL_POINT_SMOOTH);
     glEnable(GL_CULL_FACE);
+    // glEnable (GL_BLEND);
+    // glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     SDL_GL_SetSwapInterval(1);
 }
 
