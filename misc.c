@@ -21,13 +21,13 @@ void loadCube()
     };
     memcpy(Palette, tmpPal, sizeof(tmpPal));
 
-    numOfVertices = 8;
+    numOfVertices = 9;
     
     if (allCoords != NULL)
         free(allCoords);
     allCoords = (float *)malloc(numOfVertices * sizeof(float) * 3);
 
-    numPrim = 6;
+    numPrim = 2;
 
     if (allPrims != NULL)
     {
@@ -44,19 +44,22 @@ void loadCube()
         // Front
         -1, -1,  1,   1, -1,   1,   1,  1,   1,   -1,  1,   1,
         // Back
-        -1, -1, -1,   1, -1,  -1,   1,  1,  -1,   -1,  1,  -1,
+        -2, -2, -1,   0, -2,  -1,   0,  0,  -1,   -2,  0,  -1,
     };
     memcpy(allCoords, coordTmp, sizeof(coordTmp));
+    allCoords[24] = allCoords[25] = allCoords[26] = 0.0f;
+    // allCoords[26] = -1.1f;
     
     // This is just to make it easier to write the indices
     uint16_t indicesTmp[] =
     {
         0, 1, 2, 3, // Front
-        0, 3, 7, 4, // Left
-        4, 7, 6, 5, // Back
-        1, 5, 6, 2, // Right
-        3, 2, 6, 7, // Top
-        0, 4, 5, 1  // Bottom
+        4, 5, 6, 7
+        // 0, 3, 7, 4, // Left
+        // 4, 7, 6, 5, // Back
+        // 1, 5, 6, 2, // Right
+        // 3, 2, 6, 7, // Top
+        // 0, 4, 5, 1  // Bottom
     };
 
     for (int i = 0; i < numPrim; ++i)
@@ -68,6 +71,13 @@ void loadCube()
         int offset = i * allPrims[i].numOfPointInPoly;
         memcpy(allPrims[i].indices, indicesTmp + offset, allPrims[i].numOfPointInPoly * sizeof(uint16_t));
     }
+
+    // TODO I should not be seeing this point, as it is inside the cube... but I see it anyway :(
+    allPrims[6].type = PRIM_POINT;
+    allPrims[6].colorIndex = 5;
+    allPrims[6].numOfPointInPoly = 1;
+    allPrims[6].indices = (uint16_t *)malloc(allPrims[6].numOfPointInPoly * sizeof(uint16_t));
+    allPrims[6].indices[0] = 8;
     
     // 50% downscaling just for aesthetics
     mat4x4 M;
