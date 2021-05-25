@@ -3,10 +3,12 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include "SDL_endian.h"
+#include <math.h>
+#include "linmath.h"
 
 
 SDL_Window *Window;
-GLuint Vbo, Vao;
+GLuint Vbo, Vao, ShaderProg;
 
 
 GLchar* vertexSrc = \
@@ -14,9 +16,10 @@ GLchar* vertexSrc = \
     in vec3 in_Position;\
     in vec3 in_Color;\
     out vec3 color;\
+    uniform mat4 transf;\
     void main(void) {\
         color = in_Color;\
-        gl_Position = vec4(in_Position, 1.0);\
+        gl_Position = transf * vec4(in_Position, 1.0);\
     }";
 
 GLchar* fragSrc = \
@@ -41,7 +44,7 @@ void initSystem()
         SDL_WINDOWPOS_UNDEFINED, 
         SDL_WINDOWPOS_UNDEFINED, 
         800,
-        600, 
+        800, 
         SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
     SDL_GLContext *context = SDL_GL_CreateContext(Window);
     SDL_GL_MakeCurrent(Window, context);
@@ -109,14 +112,17 @@ void initSystem()
        exit(-1);
     }
 
-    GLuint shaderProg = glCreateProgram();
-    glAttachShader(shaderProg, vertexShader);
-    glAttachShader(shaderProg, fragShader);
+    ShaderProg = glCreateProgram();
+    glAttachShader(ShaderProg, vertexShader);
+    glAttachShader(ShaderProg, fragShader);
     // This connects VAO position 0 (set above) to the shader variable in_Position
-    glBindAttribLocation(shaderProg, 0, "in_Position");
-    glBindAttribLocation(shaderProg, 1, "in_Color");
-    glLinkProgram(shaderProg);
-    glUseProgram(shaderProg);
+    glBindAttribLocation(ShaderProg, 0, "in_Position");
+    glBindAttribLocation(ShaderProg, 1, "in_Color");
+    glLinkProgram(ShaderProg);
+    glUseProgram(ShaderProg);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
 }
 
 int main(int argc, char *argv[])
@@ -127,17 +133,31 @@ int main(int argc, char *argv[])
     {
         -0.5, -0.5, 0.0,    1, 0, 0,
          0.5, -0.5, 0.0,    0, 1, 0,
-         0.0,  0.5, 0.0,    0, 0, 1
+         0.5,  0.5, 0.0,    0, 0, 1,
+        -0.5,  0.5, 0.0,    0, 1, 1, 
+         0.0,  0.0, 0.0,    1, 1, 0
     };
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    float angleX = 0, angleY = 0, angleZ = 0;
+    mat4x4 M;
 
     int quit = 0;
     do
     {
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        mat4x4_identity(M);
+        mat4x4_rotate_Y(M, M, angleY);
+        mat4x4_rotate_Z(M, M, angleZ);
+        mat4x4_rotate_X(M, M, angleX);
+        GLint transfLoc = glGetUniformLocation(ShaderProg, "transf");
+        glUniformMatrix4fv(transfLoc, 1, GL_FALSE, (const GLfloat *)M);
 
         glBindVertexArray(Vao);    
-            glDrawArrays(GL_TRIANGLES, 0, 3);
+            glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+            glPointSize(200);
+            glDrawArrays(GL_POINTS, 4, 1);
         glBindVertexArray(0);
 
         SDL_GL_SwapWindow(Window);
@@ -156,6 +176,18 @@ int main(int argc, char *argv[])
                 {
                     case SDLK_ESCAPE:
                         quit = 1;
+                        break;
+
+                    case SDLK_a:
+                        angleZ += M_PI / 18; // 10 deg
+                        break;
+
+                    case SDLK_LEFT:
+                        angleY += M_PI / 18; // 10 deg
+                        break;
+
+                    case SDLK_UP:
+                        angleX += M_PI / 18; // 10 deg
                         break;
                 }
             }
