@@ -67,3 +67,6 @@ ITD_RESS
 
   * Not 100% sure, but it seems that the skeleton driver is mirrored horizontally..? I wonder if it
     happens with other models and if that is indicated by a flag, or something else.
+    - Models are for sure mirrored. Carnby is holding the lantern in his left hand in the loaded model.
+
+  * IMPORTANT: What is the winding order of the faces as read from the PAKs?
