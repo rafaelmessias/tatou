@@ -47,7 +47,8 @@ void initAll() {
         exit(isInit);
     }
     
-    //Use OpenGL 3.1 core
+    //Use OpenGL 3.2 core
+    // NOTE This must be *after* SDL_Init and *before* SDL_CreateWindow!
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 );
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 2 );
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
