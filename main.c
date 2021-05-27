@@ -6,7 +6,7 @@
 #include "misc.h"
 
 
-int ModelIndex = 263;
+int ModelIndex = 257;
 int primHighlight = 0;
 int isDebugPrim = 0;
 
@@ -96,6 +96,8 @@ void renderLoop()
             //     printf("  %d %f %f %f\n", off, v[0], v[1], v[2]);
             // }
 
+            glUniform1i(IsPointLoc, GL_FALSE);
+
             GLenum mode;
             switch (prim.type)
             {
@@ -109,7 +111,8 @@ void renderLoop()
 
                 case PRIM_CIRCLE:
                     // TODO Actually a sphere, or disc
-                    glPointSize(10.0f);
+                    glUniform1i(IsPointLoc, GL_TRUE);
+                    glPointSize(prim.discSize / 5.0f);
                     mode = GL_POINTS;
                     break;
 
