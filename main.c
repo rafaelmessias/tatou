@@ -111,6 +111,10 @@ void renderLoop()
                 case PRIM_CIRCLE:
                     // TODO Actually a sphere, or disc
                     glUniform1i(IsPointLoc, GL_TRUE);
+                    // ModelScale reduces the circle to [0,1], then Y_INT turns that into pixels.
+                    //   Normally we'd need an additional division by 2, because [0,1] is just
+                    //   half of the screen, but discSize is radius and glPointSize expects a
+                    //   diameter, so that fixes itself.
                     glPointSize(prim.discSize * ModelScale * Y_INT);
                     mode = GL_POINTS;
                     break;
