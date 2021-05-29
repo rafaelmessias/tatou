@@ -12,6 +12,7 @@ uint16_t *boneOffsets;
 uint16_t numBones;
 int16_t bbox[6];
 vec3 bbCenter;
+float ModelScale;
 
 
 void dumpPrim(int primIndex)
@@ -417,7 +418,8 @@ void loadModel(const char* pakName, int index)
     mat4x4_translate(M, -bbCenter[0], -bbCenter[1], -bbCenter[2]);
 
     float r = getRadius(bbCenter);
-    mat4x4_scale(M, M, 0.95f / r);
+    ModelScale = 1.0f / r;
+    mat4x4_scale(M, M, ModelScale);
 
     applyMatrix(M, allCoords, numOfVertices, NULL);
 

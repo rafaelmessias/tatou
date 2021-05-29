@@ -27,6 +27,7 @@ extern float *allCoords;
 extern int numOfVertices;
 extern Primitive *allPrims;
 extern int numPrim;
+extern float ModelScale;
 
 
 void loadModel(const char* pakName, int index);

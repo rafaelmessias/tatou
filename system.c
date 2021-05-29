@@ -4,7 +4,7 @@
 
 SDL_Window *Window;
 GLuint Vao, Vbo, Fbo;
-GLint ColorLocation;
+GLint ColorLocation, IsPointLoc;
 // TODO use a 2D array instead
 uint8_t Palette[256 * 3];
 
@@ -22,8 +22,12 @@ GLchar* fragSrc = \
     "#version 150\n\
     precision highp float;\
     uniform vec4 color;\
+    uniform bool isPoint;\
     out vec4 fragColor;\
     void main(void) {\
+        vec2 coord = gl_PointCoord - 0.5;\
+        if (isPoint && length(coord) > 0.5)\
+            discard;\
         fragColor = color;\
     }";
 
@@ -195,6 +199,7 @@ void initRenderer()
     glBindAttribLocation(shaderProg, 0, "in_Position");
     glLinkProgram(shaderProg);
     ColorLocation = glGetUniformLocation(shaderProg, "color");
+    IsPointLoc = glGetUniformLocation(shaderProg, "isPoint");
     glUseProgram(shaderProg);
 
     glEnable(GL_DEPTH_TEST);

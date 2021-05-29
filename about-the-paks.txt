@@ -70,3 +70,5 @@ ITD_RESS
     - Models are for sure mirrored. Carnby is holding the lantern in his left hand in the loaded model.
 
   * IMPORTANT: What is the winding order of the faces as read from the PAKs?
+
+  * Where are the pupils of the eyes of the monsters?
