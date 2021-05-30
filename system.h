@@ -16,7 +16,7 @@
 
 extern GLuint Vao, Vbo, Fbo;
 extern SDL_Window *Window;
-extern GLint ColorLocation, IsPointLoc;
+extern GLint ColorLocation, IsPointLoc, MVPLoc;
 extern uint8_t Palette[256 * 3];
 extern GLchar *vertexSrc, *fragSrc;
 

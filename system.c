@@ -4,7 +4,7 @@
 
 SDL_Window *Window;
 GLuint Vao, Vbo, Fbo;
-GLint ColorLocation, IsPointLoc;
+GLint ColorLocation, IsPointLoc, MVPLoc;
 // TODO use a 2D array instead
 uint8_t Palette[256 * 3];
 
@@ -14,8 +14,9 @@ uint8_t Palette[256 * 3];
 GLchar* vertexSrc = \
     "#version 150\n\
     in vec3 in_Position;\
+    uniform mat4 MVP;\
     void main(void) {\
-        gl_Position = vec4(in_Position, 1.0);\
+        gl_Position = MVP * vec4(in_Position, 1.0);\
     }";
 
 GLchar* fragSrc = \
@@ -200,6 +201,7 @@ void initRenderer()
     glLinkProgram(shaderProg);
     ColorLocation = glGetUniformLocation(shaderProg, "color");
     IsPointLoc = glGetUniformLocation(shaderProg, "isPoint");
+    MVPLoc = glGetUniformLocation(shaderProg, "MVP");
     glUseProgram(shaderProg);
 
     glEnable(GL_DEPTH_TEST);

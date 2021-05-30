@@ -58,17 +58,7 @@ void renderLoop()
         // Why doesn't this work...?
         // mat4x4_translate(M, -c[0], -c[1], -c[2]);
         
-        float tmpVbo[numOfVertices * 3];
-        applyMatrix(M, allCoords, numOfVertices, tmpVbo);
-
-        // for (int i = 0; i < numOfVertices; ++i) {
-        //     int off = i * 3;
-        //     printf("%f %f %f\n", tmpVbo[off], tmpVbo[off+1], tmpVbo[off+2]);
-        // }
-        // exit(0);
-
-        // getCentroid(c, tmpVbo, numOfVertices);
-        // printf("%f %f %f\n", c[0], c[1], c[2]);
+        glUniformMatrix4fv(MVPLoc, 1, GL_FALSE, (const float *)M);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -76,7 +66,7 @@ void renderLoop()
         // NOTE One important thing to do when programming with OpenGL is to avoid ambiguity, in the name of sanity (e.g. for easier debugging)
         //   Ex.: I might not have to bind this buffer everytime, but by doing this I know for sure I'm using the right buffer
         glBindBuffer(GL_ARRAY_BUFFER, Vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(tmpVbo), tmpVbo, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, numOfVertices * sizeof(float) * 3, allCoords, GL_STATIC_DRAW);
         
         for (int i = 0; i < numPrim; ++i) 
         {
@@ -89,12 +79,6 @@ void renderLoop()
             };
             glUniform4f(ColorLocation, color[0], color[1], color[2], 1.0f);
             // printf("%f %f %f\n", color[0], color[1], color[2]);
-            // printf("%d\n", prim.numOfPointInPoly);
-            // for (int j = 0; j < prim.numOfPointInPoly; ++j) {
-            //     int off = prim.indices[j];
-            //     vec3 v = {tmpVbo[off], tmpVbo[off+1], tmpVbo[off+2]};
-            //     printf("  %d %f %f %f\n", off, v[0], v[1], v[2]);
-            // }
             glUniform1i(IsPointLoc, GL_FALSE);
 
             GLenum mode;
