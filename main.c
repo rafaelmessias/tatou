@@ -9,6 +9,7 @@
 int ModelIndex = 257;
 int primHighlight = 0;
 int isDebugPrim = 0;
+int modelChanged;
 
 
 // TODO Make a "model" struct for this
@@ -18,9 +19,20 @@ void renderLoop()
     Uint32 ticks = SDL_GetTicks();
     mat4x4 M;
 
+    modelChanged = 1;
+
     int quit = 0;
     while (!quit)
     {
+        if (modelChanged)
+        {
+            modelChanged = 0;
+            // Send the vertices to the GPU
+            // NOTE One important thing to do when programming with OpenGL is to avoid ambiguity, in the name of sanity (e.g. for easier debugging)
+            //   Ex.: I might not have to bind this buffer everytime, but by doing this I know for sure I'm using the right buffer
+            glBindBuffer(GL_ARRAY_BUFFER, Vbo);
+            glBufferData(GL_ARRAY_BUFFER, numOfVertices * sizeof(float) * 3, allCoords, GL_STATIC_DRAW);
+        }
         
         mat4x4_identity(M);
 
@@ -61,12 +73,6 @@ void renderLoop()
         glUniformMatrix4fv(MVPLoc, 1, GL_FALSE, (const float *)M);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // Send the vertices to the GPU
-        // NOTE One important thing to do when programming with OpenGL is to avoid ambiguity, in the name of sanity (e.g. for easier debugging)
-        //   Ex.: I might not have to bind this buffer everytime, but by doing this I know for sure I'm using the right buffer
-        glBindBuffer(GL_ARRAY_BUFFER, Vbo);
-        glBufferData(GL_ARRAY_BUFFER, numOfVertices * sizeof(float) * 3, allCoords, GL_STATIC_DRAW);
         
         for (int i = 0; i < numPrim; ++i) 
         {
@@ -195,6 +201,7 @@ void renderLoop()
                         // TODO Must check boundaries here
                         loadModel("LISTBODY", ++ModelIndex);
                         primHighlight = 0;
+                        modelChanged = 1;
                         // dumpModel();
                         break;
 
@@ -202,7 +209,8 @@ void renderLoop()
                         if (ModelIndex > 0)
                         {
                             loadModel("LISTBODY", --ModelIndex);
-                            primHighlight = 0;                            
+                            primHighlight = 0;
+                            modelChanged = 1;                         
                             // dumpModel();
                         }                        
                         break;
